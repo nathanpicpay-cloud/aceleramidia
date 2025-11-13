@@ -16,7 +16,7 @@ const AboutSection: React.FC = () => {
           </div>
           <div className="relative">
             <div className="aspect-square rounded-3xl overflow-hidden shadow-2xl shadow-black">
-                <img src="https://i.imgur.com/OG9NKwa.png" alt="Acelera Mídia Team" className="w-full h-full object-cover" />
+                <img src="https://images.weserv.nl/?url=i.imgur.com/OG9NKwa.png" alt="Acelera Mídia Team" className="w-full h-full object-cover" />
             </div>
           </div>
         </div>

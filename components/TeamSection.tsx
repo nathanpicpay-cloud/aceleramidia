@@ -1,11 +1,11 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 
 const teamMembers = [
-  { name: "Nathan Freitas", role: "CEO & Web Designer", image: "https://i.imgur.com/FDhmyHS.jpeg" },
-  { name: "Manu Freire", role: "CEO & Dev Back-end", image: "https://i.imgur.com/oQSnHQk.jpeg" },
-  { name: "Thauan Souza", role: "Desenvolvedor Front-end", image: "https://i.imgur.com/Ryjc3Vf.jpeg" },
-  { name: "Clara Abreu", role: "Modelo & Influencer", image: "https://i.imgur.com/ahQjUz5.jpeg" },
-  { name: "Luan Ramos", role: "Gestor de CRM´s", image: "https://i.imgur.com/QWjLjUP.jpeg" },
+  { name: "Nathan Freitas", role: "CEO & Web Designer", image: "https://images.weserv.nl/?url=i.imgur.com/FDhmyHS.jpeg" },
+  { name: "Manu Freire", role: "CEO & Dev Back-end", image: "https://images.weserv.nl/?url=i.imgur.com/oQSnHQk.jpeg" },
+  { name: "Thauan Souza", role: "Desenvolvedor Front-end", image: "https://images.weserv.nl/?url=i.imgur.com/Ryjc3Vf.jpeg" },
+  { name: "Clara Abreu", role: "Modelo & Influencer", image: "https://images.weserv.nl/?url=i.imgur.com/ahQjUz5.jpeg" },
+  { name: "Luan Ramos", role: "Gestor de CRM´s", image: "https://images.weserv.nl/?url=i.imgur.com/QWjLjUP.jpeg" },
 ];
 
 const TeamMemberCard: React.FC<{ name: string, role: string, image: string }> = ({ name, role, image }) => {
