@@ -5,7 +5,7 @@ const HeroSection: React.FC = () => {
     <section id="hero" className="relative min-h-screen flex justify-center items-center text-center overflow-hidden px-4">
       <div className="relative z-10 max-w-4xl mx-auto">
         <h1 className="text-5xl md:text-7xl lg:text-8xl font-manrope font-extrabold uppercase tracking-tighter">
-           <img src="https://images.weserv.nl/?url=i.imgur.com/Pv3Xnec.png" alt="Acelera Mídia" className="mx-auto max-w-full h-auto w-[clamp(300px,80vw,600px)] drop-shadow-[0_0_20px_rgba(255,0,127,0.7)]" />
+           <img src="https://i.imgur.com/Pv3Xnec.png" alt="Acelera Mídia" className="mx-auto max-w-full h-auto w-[clamp(300px,80vw,600px)] drop-shadow-[0_0_20px_rgba(255,0,127,0.7)]" />
         </h1>
         <p className="mt-4 text-lg md:text-2xl text-zinc-300 max-w-2xl mx-auto">
           Transformamos ideias em <span className="text-white font-semibold">experiências digitais</span> incríveis.
