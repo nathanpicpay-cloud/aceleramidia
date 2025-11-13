@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
@@ -14,8 +15,8 @@ import LoginModal from './components/LoginModal';
 
 // Default project data if nothing is in localStorage
 const initialProjects = [
-  { name: "Sou Felina | Moda Íntima", image: "https://i.imgur.com/3Z7VqfD.png", link: "https://sou-felina.vercel.app/" },
-  { name: "Landing Page Studio X", image: "https://picsum.photos/seed/studiox/400/800", link: "#" },
+  { name: "Sou Felina | Moda Íntima", image: "https://i.imgur.com/IvM4D3x.png", link: "https://sou-felina.vercel.app/" },
+  { name: "Hee In Fragrâncias", image: "https://i.imgur.com/uLUrQab.png", link: "https://heeinfragrancias.vercel.app/" },
   { name: "Sistema de Reservas Hotelaria", image: "https://picsum.photos/seed/hotel/400/800", link: "#" },
   { name: "E-commerce de Moda", image: "https://picsum.photos/seed/fashion/400/800", link: "#" },
   { name: "App de Viagens", image: "https://picsum.photos/seed/travel/400/800", link: "#" },

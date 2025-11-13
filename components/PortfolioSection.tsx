@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useCallback, useMemo } from 'react';
 
 interface Project {
@@ -13,14 +12,17 @@ interface PortfolioSectionProps {
 
 const PortfolioItemCard: React.FC<Project> = ({ name, image, link }) => {
   return (
-    <a href={link} target="_blank" rel="noopener noreferrer" className="block group w-full h-full">
-      <div className="relative w-full h-full mx-auto border-black bg-black border-[10px] rounded-[2.5rem] shadow-lg transform group-hover:scale-105 transition-transform duration-300">
-        <div className="rounded-[2rem] w-full h-full overflow-hidden">
-          <img src={image} alt={name} className="w-full h-full object-cover object-top" />
-          <div className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <h3 className="text-white text-lg font-bold text-center px-2">{name}</h3>
-          </div>
-        </div>
+    <a 
+      href={link} 
+      target="_blank" 
+      rel="noopener noreferrer" 
+      className="block group w-full h-full relative rounded-2xl overflow-hidden 
+                 shadow-[0_0_15px_rgba(255,0,127,0.4)] hover:shadow-[0_0_25px_rgba(255,0,127,0.7)] 
+                 transition-all duration-300 transform hover:scale-105"
+    >
+      <img src={image} alt={name} className="w-full h-full object-cover object-top" />
+      <div className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <h3 className="text-white text-lg font-bold text-center px-2">{name}</h3>
       </div>
     </a>
   );
@@ -135,7 +137,7 @@ const PortfolioSection: React.FC<PortfolioSectionProps> = ({ projects }) => {
       
       <ul 
         ref={carouselRef}
-        className="flex items-center overflow-x-auto hide-scrollbar space-x-8 px-4 [mask-image:_linear-gradient(to_right,transparent_0,_black_128px,_black_calc(100%-128px),transparent_100%)]"
+        className="flex items-center overflow-x-auto hide-scrollbar space-x-8 px-4 py-8 [mask-image:_linear_gradient(to_right,transparent_0,_black_128px,_black_calc(100%-128px),transparent_100%)]"
         style={{ cursor: 'grab' }}
         onMouseDown={onMouseDown}
         onMouseLeave={onMouseLeave}
