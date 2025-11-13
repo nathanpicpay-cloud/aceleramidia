@@ -15,8 +15,8 @@ import LoginModal from './components/LoginModal';
 
 // Default project data if nothing is in localStorage
 const initialProjects = [
-  { name: "Sou Felina | Moda Íntima", image: "https://i.filmot.org/IvM4D3x.png", link: "https://sou-felina.vercel.app/" },
-  { name: "Hee In Fragrâncias", image: "https://i.filmot.org/uLUrQab.png", link: "https://heeinfragrancias.vercel.app/" },
+  { name: "Sou Felina | Moda Íntima", image: "https://images.weserv.nl/?url=https://i.imgur.com/IvM4D3x.png", link: "https://sou-felina.vercel.app/" },
+  { name: "Hee In Fragrâncias", image: "https://images.weserv.nl/?url=https://i.imgur.com/uLUrQab.png", link: "https://heeinfragrancias.vercel.app/" },
   { name: "Sistema de Reservas Hotelaria", image: "https://picsum.photos/seed/hotel/400/800", link: "#" },
   { name: "E-commerce de Moda", image: "https://picsum.photos/seed/fashion/400/800", link: "#" },
   { name: "App de Viagens", image: "https://picsum.photos/seed/travel/400/800", link: "#" },
