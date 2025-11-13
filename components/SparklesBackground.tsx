@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
 interface Sparkle {
   id: number;
@@ -37,12 +37,8 @@ const generateSparkles = (count: number): Sparkle[] => {
   return sparkles;
 };
 
-const SparklesBackground: React.FC<{ count?: number; className?: string }> = ({ count = 50, className = '' }) => {
-  const [sparkles, setSparkles] = useState<Sparkle[]>([]);
-
-  useEffect(() => {
-    setSparkles(generateSparkles(count));
-  }, [count]);
+const SparklesBackground: React.FC<{ count?: number; className?: string; }> = ({ count = 50, className = '' }) => {
+  const sparkles = generateSparkles(count);
 
   return (
     <div className={`w-full h-full overflow-hidden ${className}`}>

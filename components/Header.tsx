@@ -29,7 +29,7 @@ const Header: React.FC<HeaderProps> = ({ isAdmin, onAdminClick, onLogout }) => {
     <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-black/80 backdrop-blur-lg border-b border-zinc-800' : 'bg-transparent'}`}>
       <div className="container mx-auto px-6 py-2 flex justify-center md:justify-between items-center">
         <a href="#hero" className="block">
-          <img src="https://i.imgur.com/RGEGdQ0.png" alt="Acelera Mídia Logo" className="h-12 w-auto drop-shadow-[0_0_10px_rgba(255,0,127,0.6)]" />
+          <img src="https://i.imgur.com/p6rDq9M.png" alt="Acelera Mídia Logo" className="h-8 w-auto drop-shadow-[0_0_10px_rgba(255,0,127,0.6)]" />
         </a>
         <nav className="hidden md:flex items-center space-x-8">
           {navLinks.map((link) => (
@@ -42,9 +42,9 @@ const Header: React.FC<HeaderProps> = ({ isAdmin, onAdminClick, onLogout }) => {
           {isAdmin && (
             <>
               <button onClick={onAdminClick} className="bg-blue-600 text-white font-bold py-2 px-6 rounded-full text-sm hover:bg-opacity-80 transition-all duration-300 shadow-[0_0_15px_rgba(59,130,246,0.5)]">
-                Admin Panel
+                Painel Admin
               </button>
-               <button onClick={onLogout} className="text-zinc-400 hover:text-white text-sm">Logout</button>
+               <button onClick={onLogout} className="text-zinc-400 hover:text-white text-sm">Sair</button>
             </>
           )}
           <a href="#contato" className="inline-block bg-[#FF007F] text-white font-bold py-2 px-6 rounded-full text-sm hover:bg-opacity-80 transition-all duration-300 shadow-[0_0_15px_rgba(255,0,127,0.5)]">

@@ -106,9 +106,6 @@ const TeamSection: React.FC = () => {
 
   return (
     <section id="time" className="py-20 md:py-32 relative overflow-hidden">
-        <div className="absolute top-1/2 left-0 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-[#FF007F] to-purple-600 rounded-full blur-[150px] opacity-10 -z-10"></div>
-        <div className="absolute top-1/2 right-0 -translate-y-1/2 w-96 h-96 bg-gradient-to-l from-pink-500 to-rose-600 rounded-full blur-[150px] opacity-10 -z-10"></div>
-
         <div className="relative z-10">
             <div className="container mx-auto px-6 text-center">
                 <h2 className="text-4xl md:text-5xl font-manrope font-extrabold mb-4">

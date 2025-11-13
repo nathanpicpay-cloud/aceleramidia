@@ -18,8 +18,6 @@ const AboutSection: React.FC = () => {
             <div className="aspect-square rounded-3xl overflow-hidden shadow-2xl shadow-black">
                 <img src="https://i.imgur.com/OG9NKwa.png" alt="Acelera Mídia Team" className="w-full h-full object-cover" />
             </div>
-             <div className="absolute -top-8 -right-8 w-32 h-32 bg-gradient-to-br from-[#FF007F] to-purple-600 rounded-full blur-2xl opacity-30 -z-10"></div>
-             <div className="absolute -bottom-8 -left-8 w-48 h-48 bg-gradient-to-br from-pink-500 to-rose-600 rounded-full blur-2xl opacity-20 -z-10"></div>
           </div>
         </div>
       </div>

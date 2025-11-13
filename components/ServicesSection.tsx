@@ -25,9 +25,6 @@ const ServiceCard: React.FC<{ name: string; desc: string; index: number }> = ({ 
 const ServicesSection: React.FC = () => {
   return (
     <section id="servicos" className="py-20 md:py-32 relative overflow-hidden">
-      <div className="absolute -top-16 -left-16 w-80 h-80 bg-gradient-to-br from-[#FF007F] to-purple-600 rounded-full blur-[120px] opacity-10 -z-10"></div>
-      <div className="absolute -bottom-16 -right-16 w-80 h-80 bg-gradient-to-tl from-pink-500 to-rose-600 rounded-full blur-[120px] opacity-10 -z-10"></div>
-      
       <div className="container mx-auto px-6 text-center relative z-10">
         <h2 className="text-4xl md:text-5xl font-manrope font-extrabold mb-4">
           Nossos <span className="text-[#FF007F]">Serviços</span>

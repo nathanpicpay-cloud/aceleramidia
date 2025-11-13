@@ -82,7 +82,11 @@ const App: React.FC = () => {
 
   return (
     <div className="bg-black text-white overflow-x-hidden relative">
-      <SparklesBackground count={100} className="fixed inset-0 z-0" />
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute -top-1/4 -left-1/4 w-3/4 h-3/4 bg-[#FF007F] rounded-full blur-[200px] opacity-10"></div>
+        <div className="absolute -bottom-1/4 -right-1/4 w-3/4 h-3/4 bg-purple-600 rounded-full blur-[200px] opacity-10"></div>
+      </div>
+      <SparklesBackground className="fixed inset-0 z-0" />
       
       <Header isAdmin={isAdmin} onAdminClick={handleAdminAction} onLogout={handleLogout} />
       
@@ -93,10 +97,10 @@ const App: React.FC = () => {
         <AboutSection />
         <ServicesSection />
         <TeamSection />
-        <ContactSection />
+        <ContactSection isAdmin={isAdmin} onAdminClick={handleAdminAction} />
       </main>
       
-      <Footer isAdmin={isAdmin} onAdminLoginClick={handleAdminAction} />
+      <Footer />
 
       {isLoginModalOpen && (
         <LoginModal

@@ -9,7 +9,7 @@ const benefits = [
 
 const BenefitsSection: React.FC = () => {
     return (
-        <section id="benefits" className="py-20 bg-black">
+        <section id="benefits" className="py-20">
             <div className="container mx-auto px-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {benefits.map((benefit, index) => (
