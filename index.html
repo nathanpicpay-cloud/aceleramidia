@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Acelera Mídia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@800&family=Onest:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Onest', sans-serif;
+      }
+      .font-manrope {
+        font-family: 'Manrope', sans-serif;
+      }
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      @keyframes firefly-drift {
+        0% {
+          transform: translate(0, 0) scale(0.5);
+          opacity: 0.2;
+        }
+        25% {
+          transform: translate(var(--tx1), var(--ty1)) scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: translate(var(--tx2), var(--ty2)) scale(0.7);
+          opacity: 0.8;
+        }
+        75% {
+          transform: translate(var(--tx3), var(--ty3)) scale(1);
+          opacity: 1;
+        }
+        100% {
+          transform: translate(0, 0) scale(0.5);
+          opacity: 0.2;
+        }
+      }
+      .sparkle {
+        position: absolute;
+        border-radius: 50%;
+        background-color: #FF007F;
+        animation-name: firefly-drift;
+        animation-timing-function: ease-in-out;
+        animation-iteration-count: infinite;
+        box-shadow: 0 0 5px #FF007F, 0 0 10px #FF007F, 0 0 15px #FF007F, 0 0 20px #ff007f80;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
