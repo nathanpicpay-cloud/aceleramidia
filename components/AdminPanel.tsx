@@ -163,15 +163,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, projects, onPr
               </div>
 
               <input type="text" name="link" value={formData.link} onChange={handleInputChange} placeholder="Link URL" required className="w-full bg-zinc-700 p-2 rounded text-white placeholder-zinc-400"/>
-              <div className="flex space-x-4">
-                <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                  {editingProject ? 'Update Project' : 'Add Project'}
-                </button>
-                {editingProject && (
-                  <button type="button" onClick={handleCancelEdit} className="bg-zinc-600 hover:bg-zinc-700 text-white font-bold py-2 px-4 rounded">
-                    Cancel Edit
+              <div>
+                <div className="flex space-x-4">
+                  <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    {editingProject ? 'Update Project' : 'Add Project'}
                   </button>
-                )}
+                  {editingProject && (
+                    <button type="button" onClick={handleCancelEdit} className="bg-zinc-600 hover:bg-zinc-700 text-white font-bold py-2 px-4 rounded">
+                      Cancel Edit
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-zinc-400 mt-3">
+                  Todas as alterações de imagens e links feitas neste painel serão salvas e atualizadas para todos os usuários.
+                </p>
               </div>
             </form>
           </div>
