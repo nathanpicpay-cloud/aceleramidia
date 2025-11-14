@@ -1,28 +1,25 @@
-
 import React, { useState, useEffect } from 'react';
-
-interface Project {
-  name: string;
-  image: string;
-  link: string;
-}
+import type { Project } from '../App';
+import { storage } from '../lib/firebaseClient';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
 interface AdminPanelProps {
   isOpen: boolean;
   onClose: () => void;
   projects: Project[];
-  onProjectsChange: (projects: Project[]) => void;
+  onAddProject: (project: Omit<Project, 'id' | 'created_at' | 'updated_at'>) => void;
+  onUpdateProject: (project: Pick<Project, 'id' | 'name' | 'image' | 'link'>) => void;
+  onDeleteProject: (project: Project) => void;
 }
 
 const ProjectListItem: React.FC<{
   project: Project;
   onEdit: () => void;
-  onDelete: () => void;
+  onDelete: (project: Project) => void;
 }> = ({ project, onEdit, onDelete }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // A small delay to allow the component to mount before starting the animation
     const timer = setTimeout(() => setIsVisible(true), 10);
     return () => clearTimeout(timer);
   }, []);
@@ -30,8 +27,7 @@ const ProjectListItem: React.FC<{
   const handleDeleteClick = () => {
     if (window.confirm('Are you sure you want to delete this project?')) {
       setIsVisible(false);
-      // Wait for the fade-out animation to complete before removing the item
-      setTimeout(onDelete, 300);
+      setTimeout(() => onDelete(project), 300);
     }
   };
 
@@ -58,16 +54,22 @@ const ProjectListItem: React.FC<{
   );
 };
 
-const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, projects, onProjectsChange }) => {
-  const [editingProject, setEditingProject] = useState<Project & { index: number } | null>(null);
+const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, projects, onAddProject, onUpdateProject, onDeleteProject }) => {
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [formData, setFormData] = useState({ name: '', image: '', link: '' });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
 
   useEffect(() => {
     if (editingProject) {
       setFormData({ name: editingProject.name, image: editingProject.image, link: editingProject.link });
+      setPreviewUrl(editingProject.image);
     } else {
       setFormData({ name: '', image: '', link: '' });
+      setPreviewUrl('');
     }
+    setImageFile(null);
   }, [editingProject]);
   
   if (!isOpen) return null;
@@ -75,46 +77,93 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, projects, onPr
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    if (name === 'image') {
+      setPreviewUrl(value); // Update preview if URL is pasted manually
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, image: reader.result as string }));
+        setPreviewUrl(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingProject) {
-      // Update existing project
-      const updatedProjects = [...projects];
-      updatedProjects[editingProject.index] = { name: formData.name, image: formData.image, link: formData.link };
-      onProjectsChange(updatedProjects);
-    } else {
-      // Add new project
-      onProjectsChange([...projects, formData]);
+    if (!formData.name || (!imageFile && !formData.image) || !formData.link) {
+      alert("Please fill all fields and provide an image.");
+      return;
     }
+
+    if (!storage) {
+        alert("Storage is not configured. Cannot upload image.");
+        return;
+    }
+
+    setIsUploading(true);
+    let finalImageUrl = formData.image;
+
+    // If a new file is selected, upload it to Firebase Storage
+    if (imageFile) {
+      try {
+        // If we are editing an existing project, delete the old image first.
+        if (editingProject?.image) {
+          const oldImageRef = ref(storage, editingProject.image);
+          await deleteObject(oldImageRef).catch(err => {
+            if (err.code !== 'storage/object-not-found') throw err;
+            console.warn("Old image not found, proceeding with upload.");
+          });
+        }
+
+        // Upload the new image
+        const imageRef = ref(storage, `project-images/${Date.now()}_${imageFile.name}`);
+        const uploadResult = await uploadBytes(imageRef, imageFile);
+        finalImageUrl = await getDownloadURL(uploadResult.ref);
+
+      } catch (uploadError) {
+        console.error("Image upload error:", uploadError);
+        alert("Failed to upload image. Please try again.");
+        setIsUploading(false);
+        return;
+      }
+    }
+
+    const projectData = {
+      name: formData.name,
+      image: finalImageUrl,
+      link: formData.link,
+    };
+
+    if (editingProject) {
+      onUpdateProject({ ...projectData, id: editingProject.id });
+    } else {
+      onAddProject(projectData);
+    }
+    
     setEditingProject(null);
     setFormData({ name: '', image: '', link: '' });
+    setImageFile(null);
+    setPreviewUrl('');
+    setIsUploading(false);
   };
 
-  const handleEdit = (project: Project, index: number) => {
-    setEditingProject({ ...project, index });
+  const handleEdit = (project: Project) => {
+    setEditingProject(project);
+    document.getElementById('project-form')?.scrollIntoView({ behavior: 'smooth' });
   };
-  
-  const handleDelete = (index: number) => {
-    const updatedProjects = projects.filter((_, i) => i !== index);
-    onProjectsChange(updatedProjects);
+
+  const handleDelete = (project: Project) => {
+    onDeleteProject(project);
   };
 
   const handleCancelEdit = () => {
     setEditingProject(null);
-    setFormData({ name: '', image: '', link: '' });
   }
 
   return (
@@ -126,8 +175,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, projects, onPr
         </div>
 
         <div className="p-6 overflow-y-auto">
-          {/* Form Section */}
-          <div className="bg-zinc-800 p-4 rounded-lg mb-6">
+          <div id="project-form" className="bg-zinc-800 p-4 rounded-lg mb-6">
             <h3 className="font-bold mb-4 text-lg">{editingProject ? 'Edit Project' : 'Add New Project'}</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <input type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="Project Name" required className="w-full bg-zinc-700 p-2 rounded text-white placeholder-zinc-400"/>
@@ -145,9 +193,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, projects, onPr
                             className="w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-zinc-700 file:text-white hover:file:bg-zinc-600 cursor-pointer"
                         />
                     </div>
-                    {formData.image && (
+                    {previewUrl && (
                         <div className="flex justify-start">
-                            <img src={formData.image} alt="Preview" className="w-24 h-24 object-cover rounded-lg border-2 border-zinc-700" />
+                            <img src={previewUrl} alt="Preview" className="w-24 h-24 object-cover rounded-lg border-2 border-zinc-700" />
                         </div>
                     )}
                 </div>
@@ -157,7 +205,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, projects, onPr
                     value={formData.image} 
                     onChange={handleInputChange} 
                     placeholder="Or paste Image URL" 
-                    required 
                     className="w-full bg-zinc-700 p-2 rounded text-white placeholder-zinc-400 mt-2"
                 />
               </div>
@@ -165,8 +212,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, projects, onPr
               <input type="text" name="link" value={formData.link} onChange={handleInputChange} placeholder="Link URL" required className="w-full bg-zinc-700 p-2 rounded text-white placeholder-zinc-400"/>
               <div>
                 <div className="flex space-x-4">
-                  <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                    {editingProject ? 'Update Project' : 'Add Project'}
+                  <button type="submit" disabled={isUploading} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed">
+                    {isUploading ? 'Saving...' : (editingProject ? 'Update Project' : 'Add Project')}
                   </button>
                   {editingProject && (
                     <button type="button" onClick={handleCancelEdit} className="bg-zinc-600 hover:bg-zinc-700 text-white font-bold py-2 px-4 rounded">
@@ -181,16 +228,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, projects, onPr
             </form>
           </div>
 
-          {/* Projects List */}
           <div>
             <h3 className="font-bold mb-4 text-lg">Existing Projects</h3>
             <div className="space-y-3">
-              {projects.map((project, index) => (
+              {projects.map((project) => (
                 <ProjectListItem
-                  key={`${project.name}-${index}`}
+                  key={project.id}
                   project={project}
-                  onEdit={() => handleEdit(project, index)}
-                  onDelete={() => handleDelete(index)}
+                  onEdit={() => handleEdit(project)}
+                  onDelete={handleDelete}
                 />
               ))}
             </div>

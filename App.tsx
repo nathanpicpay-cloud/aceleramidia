@@ -12,46 +12,67 @@ import Footer from './components/Footer';
 import SparklesBackground from './components/SparklesBackground';
 import AdminPanel from './components/AdminPanel';
 import LoginModal from './components/LoginModal';
+import { db, storage } from './lib/firebaseClient';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { ref, deleteObject } from 'firebase/storage';
 
-// Default project data if nothing is in localStorage
-const initialProjects = [
-  { name: "Sou Felina | Moda Íntima", image: "https://images.weserv.nl/?url=https://i.imgur.com/IvM4D3x.png", link: "https://sou-felina.vercel.app/" },
-  { name: "Hee In Fragrâncias", image: "https://images.weserv.nl/?url=https://i.imgur.com/uLUrQab.png", link: "https://heeinfragrancias.vercel.app/" },
-  { name: "Sistema de Reservas Hotelaria", image: "https://picsum.photos/seed/hotel/400/800", link: "#" },
-  { name: "E-commerce de Moda", image: "https://picsum.photos/seed/fashion/400/800", link: "#" },
-  { name: "App de Viagens", image: "https://picsum.photos/seed/travel/400/800", link: "#" },
-];
-
-const PROJECTS_STORAGE_KEY = 'aceleraMidiaProjects';
+export interface Project {
+  id: string; // Firestore uses string IDs
+  name: string;
+  image: string;
+  link: string;
+  created_at: string;
+  updated_at: string;
+}
 
 const App: React.FC = () => {
-  const [projects, setProjects] = useState<any[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   useEffect(() => {
-    try {
-      const storedProjects = localStorage.getItem(PROJECTS_STORAGE_KEY);
-      if (storedProjects) {
-        setProjects(JSON.parse(storedProjects));
-      } else {
-        localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(initialProjects));
-        setProjects(initialProjects);
-      }
-    } catch (error) {
-      console.error("Failed to load projects from localStorage:", error);
-      setProjects(initialProjects);
-    }
-
-    // Check session storage for admin status
+    // Check session storage for admin status on initial load
     if (sessionStorage.getItem('isAdmin') === 'true') {
       setIsAdmin(true);
     }
-  }, []);
 
+    // Fetch initial projects from Firestore
+    const fetchProjects = async () => {
+      if (!db) {
+        console.warn("Firestore is not initialized. Cannot fetch projects.");
+        return;
+      }
+      try {
+        const projectsCollection = collection(db, 'projects');
+        const q = query(projectsCollection, orderBy('created_at', 'desc'));
+        const projectSnapshot = await getDocs(q);
+        const projectList = projectSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                name: data.name,
+                image: data.image,
+                link: data.link,
+                // Convert Firestore Timestamps to ISO strings
+                created_at: (data.created_at as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
+                updated_at: (data.updated_at as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
+            };
+        });
+        setProjects(projectList);
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+        alert("Could not load projects. Please check your connection and refresh the page.");
+      }
+    };
+
+    fetchProjects();
+  }, []);
+  
   const handleLoginAttempt = (password: string) => {
-    if (password === '777') {
+    // IMPORTANT: This is an insecure method of authentication and should be
+    // replaced with a proper auth system (like Firebase Auth) for production.
+    if (password === '777') { 
       setIsAdmin(true);
       sessionStorage.setItem('isAdmin', 'true');
       setIsLoginModalOpen(false);
@@ -68,9 +89,89 @@ const App: React.FC = () => {
     setIsAdminPanelOpen(false);
   }
 
-  const handleProjectsChange = (updatedProjects: any[]) => {
-    setProjects(updatedProjects);
-    localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(updatedProjects));
+  const addProject = async (project: Omit<Project, 'id' | 'created_at' | 'updated_at'>) => {
+     if (!db) {
+        alert("Database not connected. Cannot add project.");
+        return;
+      }
+    try {
+      const docRef = await addDoc(collection(db, 'projects'), {
+        ...project,
+        created_at: serverTimestamp(),
+        updated_at: serverTimestamp(),
+      });
+      // Add to local state immediately for instant UI update
+      const newProject: Project = {
+        ...project,
+        id: docRef.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      setProjects(prevProjects => [newProject, ...prevProjects]);
+    } catch (error) {
+      console.error('Error adding project:', error);
+      alert('Failed to add project.');
+    }
+  };
+
+  const updateProject = async (projectToUpdate: Pick<Project, 'id' | 'name' | 'image' | 'link'>) => {
+    if (!db) {
+        alert("Database not connected. Cannot update project.");
+        return;
+    }
+    const { id, ...updateData } = projectToUpdate;
+    try {
+        const projectDoc = doc(db, 'projects', id);
+        await updateDoc(projectDoc, {
+            ...updateData,
+            updated_at: serverTimestamp(),
+        });
+
+        // Update local state for instant UI feedback
+        const updatedProjectInState = {
+            ...projectToUpdate,
+            created_at: projects.find(p => p.id === id)?.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        };
+
+        setProjects(prevProjects => 
+            prevProjects.map(p => (p.id === id ? updatedProjectInState : p))
+        );
+    } catch (error) {
+        console.error('Error updating project:', error);
+        alert('Failed to update project.');
+    }
+  };
+
+
+  const deleteProject = async (projectToDelete: Project) => {
+     if (!db || !storage) {
+        alert("Database or Storage not connected. Cannot delete project.");
+        return;
+    }
+    try {
+        // 1. Delete the image from Firebase Storage
+        if (projectToDelete.image) {
+            // Firebase Storage SDK's refFromURL can handle the public URL directly
+            const imageRef = ref(storage, projectToDelete.image);
+            await deleteObject(imageRef).catch(error => {
+                // It's okay if the image doesn't exist, log a warning but don't block deletion.
+                if (error.code !== 'storage/object-not-found') {
+                    throw error;
+                }
+                console.warn("Image not found in storage, but proceeding with DB deletion.");
+            });
+        }
+
+        // 2. Delete the record from the database
+        await deleteDoc(doc(db, 'projects', projectToDelete.id));
+        
+        // 3. Update the local state
+        setProjects(prevProjects => prevProjects.filter(p => p.id !== projectToDelete.id));
+    } catch (error) {
+        console.error('Error deleting project:', error);
+        alert('Failed to delete project.');
+    }
   };
   
   const handleAdminAction = () => {
@@ -115,7 +216,9 @@ const App: React.FC = () => {
           isOpen={isAdminPanelOpen}
           onClose={() => setIsAdminPanelOpen(false)}
           projects={projects}
-          onProjectsChange={handleProjectsChange}
+          onAddProject={addProject}
+          onUpdateProject={updateProject}
+          onDeleteProject={deleteProject}
         />
       )}
     </div>

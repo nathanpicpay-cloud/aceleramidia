@@ -1,16 +1,16 @@
-import React, { useRef, useEffect, useCallback, useMemo } from 'react';
 
-interface Project {
-  name: string;
-  image: string;
-  link: string;
-}
+import React, { useRef, useEffect, useCallback, useMemo } from 'react';
+import type { Project } from '../App';
 
 interface PortfolioSectionProps {
   projects: Project[];
 }
 
-const PortfolioItemCard: React.FC<Project> = ({ name, image, link }) => {
+const PortfolioItemCard: React.FC<Project> = ({ name, image, link, updated_at }) => {
+  const imageUrlWithVersion = image && updated_at 
+    ? `${image}?v=${new Date(updated_at).getTime()}` 
+    : image;
+
   return (
     <a 
       href={link} 
@@ -20,7 +20,7 @@ const PortfolioItemCard: React.FC<Project> = ({ name, image, link }) => {
                  shadow-[0_0_15px_rgba(255,0,127,0.4)] hover:shadow-[0_0_25px_rgba(255,0,127,0.7)] 
                  transition-all duration-300 transform hover:scale-105"
     >
-      <img src={image} alt={name} className="w-full h-full object-cover object-top" />
+      <img src={imageUrlWithVersion} alt={name} className="w-full h-full object-cover object-top" />
       <div className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
         <h3 className="text-white text-lg font-bold text-center px-2">{name}</h3>
       </div>
@@ -110,7 +110,7 @@ const PortfolioSection: React.FC<PortfolioSectionProps> = ({ projects }) => {
       }
     };
   }, [autoScroll]);
-
+  
   if (!projects || projects.length === 0) {
     return (
         <section id="portfolio" className="py-20 md:py-32 overflow-hidden">
@@ -149,7 +149,7 @@ const PortfolioSection: React.FC<PortfolioSectionProps> = ({ projects }) => {
         onMouseEnter={() => isHovering.current = true}
       >
         {duplicatedItems.map((item, index) => (
-          <li key={`${item.name}-${index}`} className="w-48 h-96 flex-shrink-0">
+          <li key={`${item.id}-${index}`} className="w-48 h-96 flex-shrink-0">
             <PortfolioItemCard {...item} />
           </li>
         ))}
