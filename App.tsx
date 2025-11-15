@@ -28,7 +28,17 @@ export interface Project {
 const App: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [route] = useState(window.location.pathname);
+  // Changed from pathname to hash for SPA routing to prevent 404s
+  const [route, setRoute] = useState(window.location.hash.substring(1) || '/');
+
+  useEffect(() => {
+    // Listen to hash changes to update the route
+    const handleHashChange = () => {
+      setRoute(window.location.hash.substring(1) || '/');
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   useEffect(() => {
     // Check session storage for admin status on initial load
@@ -83,7 +93,7 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setIsAdmin(false);
     sessionStorage.removeItem('isAdmin');
-    window.location.href = '/';
+    window.location.hash = '/'; // Navigate to home using hash
   }
 
   const addProject = async (project: Omit<Project, 'id' | 'created_at' | 'updated_at'>) => {
@@ -176,7 +186,7 @@ const App: React.FC = () => {
       return (
         <AdminPanel
           isOpen={true}
-          onClose={() => { window.location.href = '/' }}
+          onClose={() => { window.location.hash = '/' }}
           projects={projects}
           onAddProject={addProject}
           onUpdateProject={updateProject}
@@ -187,7 +197,7 @@ const App: React.FC = () => {
       return (
         <div className="bg-black min-h-screen">
             <LoginModal
-              onClose={() => { window.location.href = '/' }}
+              onClose={() => { window.location.hash = '/' }}
               onLoginSubmit={handleLoginAttempt}
             />
         </div>
