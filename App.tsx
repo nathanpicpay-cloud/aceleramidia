@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
 import BenefitsSection from './components/BenefitsSection';
@@ -57,43 +57,46 @@ const App: React.FC = () => {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  useEffect(() => {
-    const checkAuthAndFetchData = async () => {
-      setIsLoading(true);
-      if (sessionStorage.getItem('isAdmin') === 'true') {
-        setIsAdmin(true);
-      }
-
-      if (!firebase?.db) {
-        setProjects([]);
-        setIsLoading(false);
-        return;
-      }
-      try {
-        const projectsCollection = collection(firebase.db, 'projects');
-        const q = query(projectsCollection, orderBy('created_at', 'desc'));
-        const projectSnapshot = await getDocs(q);
-        const projectList = projectSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                name: data.name,
-                image: data.image,
-                link: data.link,
-                created_at: (data.created_at as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
-                updated_at: (data.updated_at as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
-            };
-        });
-        setProjects(projectList);
-      } catch (error) {
-        console.error("Error fetching projects:", error);
-        alert("Could not load projects. Please check your connection and refresh the page.");
-      }
+  const fetchProjects = useCallback(async () => {
+    if (!firebase?.db) {
+      setProjects([]);
       setIsLoading(false);
-    };
-
-    checkAuthAndFetchData();
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const projectsCollection = collection(firebase.db, 'projects');
+      const q = query(projectsCollection, orderBy('created_at', 'desc'));
+      const projectSnapshot = await getDocs(q);
+      const projectList = projectSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+              id: doc.id,
+              name: data.name,
+              image: data.image,
+              link: data.link,
+              created_at: (data.created_at as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
+              updated_at: (data.updated_at as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
+          };
+      });
+      setProjects(projectList);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+      alert("Could not load projects. Please check your connection and refresh the page.");
+    } finally {
+      setIsLoading(false);
+    }
   }, [firebase]);
+
+  useEffect(() => {
+    const checkAuth = () => {
+        if (sessionStorage.getItem('isAdmin') === 'true') {
+            setIsAdmin(true);
+        }
+    };
+    checkAuth();
+    fetchProjects();
+  }, [fetchProjects]);
   
   const handleLoginAttempt = (password: string) => {
     if (password === '777') { 
@@ -134,18 +137,12 @@ const App: React.FC = () => {
         return;
       }
     try {
-      const docRef = await addDoc(collection(firebase.db, 'projects'), {
+      await addDoc(collection(firebase.db, 'projects'), {
         ...project,
         created_at: serverTimestamp(),
         updated_at: serverTimestamp(),
       });
-      const newProject: Project = {
-        ...project,
-        id: docRef.id,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      setProjects(prevProjects => [newProject, ...prevProjects]);
+      await fetchProjects();
     } catch (error) {
       console.error('Error adding project:', error);
       alert('Failed to add project.');
@@ -164,16 +161,7 @@ const App: React.FC = () => {
             ...updateData,
             updated_at: serverTimestamp(),
         });
-
-        const updatedProjectInState = {
-            ...projectToUpdate,
-            created_at: projects.find(p => p.id === id)?.created_at || new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-        };
-
-        setProjects(prevProjects => 
-            prevProjects.map(p => (p.id === id ? updatedProjectInState : p))
-        );
+        await fetchProjects();
     } catch (error) {
         console.error('Error updating project:', error);
         alert('Failed to update project.');
@@ -197,7 +185,7 @@ const App: React.FC = () => {
             });
         }
         await deleteDoc(doc(firebase.db, 'projects', projectToDelete.id));
-        setProjects(prevProjects => prevProjects.filter(p => p.id !== projectToDelete.id));
+        await fetchProjects();
     } catch (error) {
         console.error('Error deleting project:', error);
         alert('Failed to delete project.');
