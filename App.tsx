@@ -13,6 +13,7 @@ import SparklesBackground from './components/SparklesBackground';
 import AdminDashboard from './pages/AdminDashboard';
 import LoginPage from './pages/LoginPage';
 import { initializeFirebase, FirebaseInstances } from './lib/firebaseClient';
+import { firebaseConfig } from './lib/firebaseConfig';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { ref, deleteObject } from 'firebase/storage';
 
@@ -33,19 +34,12 @@ const App: React.FC = () => {
   const [firebase, setFirebase] = useState<FirebaseInstances | null>(null);
 
   useEffect(() => {
-    // Attempt to initialize Firebase from localStorage on initial load
-    const savedConfig = localStorage.getItem('firebaseConfig');
-    if (savedConfig) {
-      try {
-        const config = JSON.parse(savedConfig);
-        const instances = initializeFirebase(config);
-        if (instances) {
-          setFirebase(instances);
-        }
-      } catch (e) {
-        console.error("Failed to parse or initialize with saved Firebase config.", e);
-        localStorage.removeItem('firebaseConfig'); // Clear invalid config
-      }
+    // Initialize Firebase with the hardcoded config
+    const instances = initializeFirebase(firebaseConfig);
+    if (instances) {
+      setFirebase(instances);
+    } else {
+        setIsLoading(false); // Stop loading if firebase fails to init
     }
   }, []);
 
@@ -113,23 +107,6 @@ const App: React.FC = () => {
     sessionStorage.removeItem('isAdmin');
     window.location.hash = '/'; 
   }
-  
-  const handleConfigSave = (configString: string) => {
-    try {
-      const config = JSON.parse(configString);
-      const instances = initializeFirebase(config);
-      if (instances) {
-        setFirebase(instances);
-        localStorage.setItem('firebaseConfig', configString);
-        return true;
-      }
-      return false;
-    } catch (e) {
-      alert("Invalid JSON format for Firebase config.");
-      console.error("Error parsing Firebase config:", e);
-      return false;
-    }
-  };
 
   const addProject = async (project: Omit<Project, 'id' | 'created_at' | 'updated_at'>): Promise<void> => {
      if (!firebase?.db) {
@@ -207,7 +184,7 @@ const App: React.FC = () => {
     if (isLoading && !firebase) {
         return (
             <div className="bg-black min-h-screen flex items-center justify-center">
-                <p className="text-white">Loading...</p>
+                <p className="text-white">Loading Firebase...</p>
             </div>
         );
     }
@@ -223,7 +200,6 @@ const App: React.FC = () => {
             onUpdateProject={updateProject}
             onDeleteProject={deleteProject}
             onLogout={handleLogout}
-            onConfigSave={handleConfigSave}
             firebase={firebase}
           />
         );
