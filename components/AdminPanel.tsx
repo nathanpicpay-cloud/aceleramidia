@@ -57,7 +57,7 @@ const ProjectListItem: React.FC<{
 
 const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject, onUpdateProject, onDeleteProject, storage }) => {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
-  const [formData, setFormData] = useState({ name: '', image: '', link: '' });
+  const [formData, setFormData] = useState({ name: '', link: '' });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>('');
@@ -65,10 +65,10 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
 
   useEffect(() => {
     if (editingProject) {
-      setFormData({ name: editingProject.name, image: editingProject.image, link: editingProject.link });
+      setFormData({ name: editingProject.name, link: editingProject.link });
       setPreviewUrl(editingProject.image);
     } else {
-      setFormData({ name: '', image: '', link: '' });
+      setFormData({ name: '', link: '' });
       setPreviewUrl('');
     }
     setImageFile(null);
@@ -78,17 +78,12 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    if (name === 'image') {
-      setPreviewUrl(value);
-      setImageFile(null); // Clear file if URL is pasted
-    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setImageFile(file);
-      setFormData(prev => ({...prev, image: ''})); // Clear URL if file is chosen
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewUrl(reader.result as string);
@@ -101,19 +96,23 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
     e.preventDefault();
     setError(null);
 
-    if (!formData.name || (!imageFile && !formData.image) || !formData.link) {
-        setError("Please fill all fields and provide an image.");
-        return;
+    // --- Validation ---
+    if (!formData.name || !formData.link) {
+      setError("Project Name and Link URL are required.");
+      return;
+    }
+    if (!editingProject && !imageFile) {
+      setError("An image file is required for new projects.");
+      return;
     }
     if (!storage) {
-        setError("Storage is not configured. Go to Site Settings to configure Firebase.");
-        return;
+      setError("Storage is not configured. Go to Site Settings to configure Firebase.");
+      return;
     }
 
     setIsUploading(true);
     try {
-        let finalImageUrl = formData.image;
-        let newImageUploaded = false;
+        let finalImageUrl = editingProject?.image || '';
         const oldImageUrl = editingProject?.image;
 
         // 1. Handle new file upload if it exists
@@ -121,7 +120,12 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
             const imageRef = ref(storage, `project-images/${Date.now()}_${imageFile.name}`);
             const uploadResult = await uploadBytes(imageRef, imageFile);
             finalImageUrl = await getDownloadURL(uploadResult.ref);
-            newImageUploaded = true;
+        }
+        
+        if (!finalImageUrl) {
+            setError("A project image is required.");
+            setIsUploading(false);
+            return;
         }
 
         const projectData = {
@@ -137,11 +141,14 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
             await onAddProject(projectData);
         }
 
-        // 3. If update/add was successful, and a new image was uploaded, delete the old one
-        if (newImageUploaded && oldImageUrl && oldImageUrl.includes('firebasestorage.googleapis.com')) {
+        // 3. If update was successful, a new image was uploaded, and there was an old image, delete the old one.
+        if (imageFile && oldImageUrl && oldImageUrl.includes('firebasestorage.googleapis.com')) {
             try {
-                const oldImageRef = ref(storage, oldImageUrl);
-                await deleteObject(oldImageRef);
+                // Do not delete if the URL is the same (can happen in rare cases)
+                if (oldImageUrl !== finalImageUrl) {
+                    const oldImageRef = ref(storage, oldImageUrl);
+                    await deleteObject(oldImageRef);
+                }
             } catch (deleteError: any) {
                 console.warn("Successfully saved project, but failed to delete old image.", deleteError);
             }
@@ -149,9 +156,6 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
       
         // 4. Reset form on success
         setEditingProject(null);
-        setFormData({ name: '', image: '', link: '' });
-        setImageFile(null);
-        setPreviewUrl('');
 
     } catch (err: any) {
         console.error("Failed to save project:", err);
@@ -196,7 +200,9 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
               <div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
                     <div>
-                        <label htmlFor="image-upload" className="block text-sm font-medium text-zinc-300 mb-2">Upload Image</label>
+                        <label htmlFor="image-upload" className="block text-sm font-medium text-zinc-300 mb-2">
+                            {editingProject ? 'Upload New Image (Optional)' : 'Upload Image'}
+                        </label>
                         <input 
                             id="image-upload"
                             type="file" 
@@ -212,14 +218,6 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
                         </div>
                     )}
                 </div>
-                <input 
-                    type="text" 
-                    name="image" 
-                    value={formData.image} 
-                    onChange={handleInputChange} 
-                    placeholder="Or paste Image URL" 
-                    className="w-full bg-zinc-700 p-2 rounded text-white placeholder-zinc-400 mt-2"
-                />
               </div>
 
               <input type="text" name="link" value={formData.link} onChange={handleInputChange} placeholder="Link URL" required className="w-full bg-zinc-700 p-2 rounded text-white placeholder-zinc-400"/>
