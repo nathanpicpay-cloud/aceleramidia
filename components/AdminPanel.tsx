@@ -61,6 +61,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (editingProject) {
@@ -71,6 +72,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
       setPreviewUrl('');
     }
     setImageFile(null);
+    setError(null);
   }, [editingProject]);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,13 +97,15 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
     if (!formData.name || (!imageFile && !formData.image) || !formData.link) {
-      alert("Please fill all fields and provide an image.");
+      setError("Please fill all fields and provide an image.");
       return;
     }
 
     if (!storage) {
-        alert("Storage is not configured. Please go to Site Settings to configure your Firebase connection.");
+        setError("Storage is not configured. Go to Site Settings to configure Firebase.");
         return;
     }
 
@@ -110,8 +114,10 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
       let finalImageUrl = formData.image;
 
       if (imageFile) {
+        // If updating, try to delete the old image first
         if (editingProject?.image) {
           try {
+            // Note: This requires the full URL from Firebase Storage to work
             const oldImageRef = ref(storage, editingProject.image);
             await deleteObject(oldImageRef);
           } catch (err: any) {
@@ -138,14 +144,13 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
         await onAddProject(projectData);
       }
       
-      // Reset form state only on success
       setEditingProject(null);
       setFormData({ name: '', image: '', link: '' });
       setImageFile(null);
       setPreviewUrl('');
-    } catch (error) {
-      console.error("Failed to save project:", error);
-      // The alert is already handled in the App component's functions.
+    } catch (err: any) {
+      console.error("Failed to save project:", err);
+      setError(err.message || 'An unexpected error occurred. Please check console for details.');
     } finally {
       setIsUploading(false);
     }
@@ -159,8 +164,9 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
   const handleDelete = async (project: Project) => {
     try {
         await onDeleteProject(project);
-    } catch (error) {
-        console.error("Delete operation failed in ProjectManager:", error);
+    } catch (err: any) {
+        console.error("Delete operation failed in ProjectManager:", err);
+        setError(`Failed to delete: ${err.message}`);
     }
   };
 
@@ -212,7 +218,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
 
               <input type="text" name="link" value={formData.link} onChange={handleInputChange} placeholder="Link URL" required className="w-full bg-zinc-700 p-2 rounded text-white placeholder-zinc-400"/>
               <div>
-                <div className="flex space-x-4">
+                <div className="flex space-x-4 items-center">
                   <button type="submit" disabled={isUploading} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed">
                     {isUploading ? 'Saving...' : (editingProject ? 'Update Project' : 'Add Project')}
                   </button>
@@ -222,6 +228,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
                     </button>
                   )}
                 </div>
+                {error && <p className="text-red-400 text-sm mt-3 bg-red-900/30 p-2 rounded-md">{error}</p>}
                 <p className="text-xs text-zinc-400 mt-3">
                   Todas as alterações de imagens e links feitas neste painel serão salvas e atualizadas para todos os usuários.
                 </p>

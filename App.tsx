@@ -134,7 +134,6 @@ const App: React.FC = () => {
   const addProject = async (project: Omit<Project, 'id' | 'created_at' | 'updated_at'>): Promise<void> => {
      if (!firebase?.db) {
         const err = "Database not connected. Please configure Firebase in Site Settings.";
-        alert(err);
         throw new Error(err);
       }
     try {
@@ -146,15 +145,14 @@ const App: React.FC = () => {
       await fetchProjects();
     } catch (error) {
       console.error('Error adding project:', error);
-      alert('Failed to add project.');
-      throw error;
+      const message = `Failed to add project. Reason: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      throw new Error(message);
     }
   };
 
   const updateProject = async (projectToUpdate: Pick<Project, 'id' | 'name' | 'image' | 'link'>): Promise<void> => {
     if (!firebase?.db) {
         const err = "Database not connected. Cannot update project.";
-        alert(err);
         throw new Error(err);
     }
     const { id, ...updateData } = projectToUpdate;
@@ -167,8 +165,8 @@ const App: React.FC = () => {
         await fetchProjects();
     } catch (error) {
         console.error('Error updating project:', error);
-        alert('Failed to update project.');
-        throw error;
+        const message = `Failed to update project. Reason: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        throw new Error(message);
     }
   };
 
@@ -176,7 +174,6 @@ const App: React.FC = () => {
   const deleteProject = async (projectToDelete: Project): Promise<void> => {
      if (!firebase?.db || !firebase?.storage) {
         const err = "Database or Storage not connected. Cannot delete project.";
-        alert(err);
         throw new Error(err);
     }
     try {
@@ -193,8 +190,8 @@ const App: React.FC = () => {
         await fetchProjects();
     } catch (error) {
         console.error('Error deleting project:', error);
-        alert('Failed to delete project.');
-        throw error;
+        const message = `Failed to delete project. Reason: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        throw new Error(message);
     }
   };
 
