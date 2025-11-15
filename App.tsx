@@ -177,16 +177,24 @@ const App: React.FC = () => {
         throw new Error(err);
     }
     try {
-        if (projectToDelete.image) {
+        // First, delete the database record
+        await deleteDoc(doc(firebase.db, 'projects', projectToDelete.id));
+
+        // Then, if the image is hosted on Firebase, delete it from storage
+        if (projectToDelete.image && projectToDelete.image.includes('firebasestorage.googleapis.com')) {
             const imageRef = ref(firebase.storage, projectToDelete.image);
             await deleteObject(imageRef).catch(error => {
-                if (error.code !== 'storage/object-not-found') {
-                    throw error;
+                // If the object doesn't exist, we don't need to throw an error, just warn.
+                if (error.code === 'storage/object-not-found') {
+                    console.warn("Image not found in storage, but DB entry was deleted.");
+                } else {
+                    // For other errors, we should log them as it might indicate a problem.
+                    console.error("Error deleting image from storage:", error);
                 }
-                console.warn("Image not found in storage, but proceeding with DB deletion.");
             });
         }
-        await deleteDoc(doc(firebase.db, 'projects', projectToDelete.id));
+        
+        // Finally, refetch the projects list to update the UI
         await fetchProjects();
     } catch (error) {
         console.error('Error deleting project:', error);
