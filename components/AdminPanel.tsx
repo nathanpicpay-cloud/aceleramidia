@@ -5,16 +5,16 @@ import { ref, uploadBytes, getDownloadURL, deleteObject, FirebaseStorage } from 
 
 interface ProjectManagerProps {
   projects: Project[];
-  onAddProject: (project: Omit<Project, 'id' | 'created_at' | 'updated_at'>) => void;
-  onUpdateProject: (project: Pick<Project, 'id' | 'name' | 'image' | 'link'>) => void;
-  onDeleteProject: (project: Project) => void;
+  onAddProject: (project: Omit<Project, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  onUpdateProject: (project: Pick<Project, 'id' | 'name' | 'image' | 'link'>) => Promise<void>;
+  onDeleteProject: (project: Project) => Promise<void>;
   storage: FirebaseStorage | null;
 }
 
 const ProjectListItem: React.FC<{
   project: Project;
   onEdit: () => void;
-  onDelete: (project: Project) => void;
+  onDelete: (project: Project) => Promise<void>;
 }> = ({ project, onEdit, onDelete }) => {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -23,10 +23,12 @@ const ProjectListItem: React.FC<{
     return () => clearTimeout(timer);
   }, []);
 
-  const handleDeleteClick = () => {
+  const handleDeleteClick = async () => {
     if (window.confirm('Are you sure you want to delete this project?')) {
       setIsVisible(false);
-      setTimeout(() => onDelete(project), 300);
+      // Wait for animation to complete before deleting
+      await new Promise(resolve => setTimeout(resolve, 300));
+      await onDelete(project);
     }
   };
 
@@ -104,49 +106,49 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
     }
 
     setIsUploading(true);
-    let finalImageUrl = formData.image;
+    try {
+      let finalImageUrl = formData.image;
 
-    if (imageFile) {
-      try {
+      if (imageFile) {
         if (editingProject?.image) {
           try {
             const oldImageRef = ref(storage, editingProject.image);
             await deleteObject(oldImageRef);
           } catch (err: any) {
-             if (err.code !== 'storage/object-not-found') throw err;
-             console.warn("Old image not found, proceeding with upload.");
+             if (err.code !== 'storage/object-not-found') {
+                console.warn("Could not delete old image, but proceeding with upload.", err);
+             }
           }
         }
 
         const imageRef = ref(storage, `project-images/${Date.now()}_${imageFile.name}`);
         const uploadResult = await uploadBytes(imageRef, imageFile);
         finalImageUrl = await getDownloadURL(uploadResult.ref);
-
-      } catch (uploadError) {
-        console.error("Image upload error:", uploadError);
-        alert("Failed to upload image. Please try again.");
-        setIsUploading(false);
-        return;
       }
-    }
 
-    const projectData = {
-      name: formData.name,
-      image: finalImageUrl,
-      link: formData.link,
-    };
+      const projectData = {
+        name: formData.name,
+        image: finalImageUrl,
+        link: formData.link,
+      };
 
-    if (editingProject) {
-      onUpdateProject({ ...projectData, id: editingProject.id });
-    } else {
-      onAddProject(projectData);
+      if (editingProject) {
+        await onUpdateProject({ ...projectData, id: editingProject.id });
+      } else {
+        await onAddProject(projectData);
+      }
+      
+      // Reset form state only on success
+      setEditingProject(null);
+      setFormData({ name: '', image: '', link: '' });
+      setImageFile(null);
+      setPreviewUrl('');
+    } catch (error) {
+      console.error("Failed to save project:", error);
+      // The alert is already handled in the App component's functions.
+    } finally {
+      setIsUploading(false);
     }
-    
-    setEditingProject(null);
-    setFormData({ name: '', image: '', link: '' });
-    setImageFile(null);
-    setPreviewUrl('');
-    setIsUploading(false);
   };
 
   const handleEdit = (project: Project) => {
@@ -154,8 +156,12 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
     document.getElementById('project-form')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleDelete = (project: Project) => {
-    onDeleteProject(project);
+  const handleDelete = async (project: Project) => {
+    try {
+        await onDeleteProject(project);
+    } catch (error) {
+        console.error("Delete operation failed in ProjectManager:", error);
+    }
   };
 
   const handleCancelEdit = () => {

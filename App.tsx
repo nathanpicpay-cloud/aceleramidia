@@ -131,10 +131,11 @@ const App: React.FC = () => {
     }
   };
 
-  const addProject = async (project: Omit<Project, 'id' | 'created_at' | 'updated_at'>) => {
+  const addProject = async (project: Omit<Project, 'id' | 'created_at' | 'updated_at'>): Promise<void> => {
      if (!firebase?.db) {
-        alert("Database not connected. Please configure Firebase in Site Settings.");
-        return;
+        const err = "Database not connected. Please configure Firebase in Site Settings.";
+        alert(err);
+        throw new Error(err);
       }
     try {
       await addDoc(collection(firebase.db, 'projects'), {
@@ -146,13 +147,15 @@ const App: React.FC = () => {
     } catch (error) {
       console.error('Error adding project:', error);
       alert('Failed to add project.');
+      throw error;
     }
   };
 
-  const updateProject = async (projectToUpdate: Pick<Project, 'id' | 'name' | 'image' | 'link'>) => {
+  const updateProject = async (projectToUpdate: Pick<Project, 'id' | 'name' | 'image' | 'link'>): Promise<void> => {
     if (!firebase?.db) {
-        alert("Database not connected. Cannot update project.");
-        return;
+        const err = "Database not connected. Cannot update project.";
+        alert(err);
+        throw new Error(err);
     }
     const { id, ...updateData } = projectToUpdate;
     try {
@@ -165,14 +168,16 @@ const App: React.FC = () => {
     } catch (error) {
         console.error('Error updating project:', error);
         alert('Failed to update project.');
+        throw error;
     }
   };
 
 
-  const deleteProject = async (projectToDelete: Project) => {
+  const deleteProject = async (projectToDelete: Project): Promise<void> => {
      if (!firebase?.db || !firebase?.storage) {
-        alert("Database or Storage not connected. Cannot delete project.");
-        return;
+        const err = "Database or Storage not connected. Cannot delete project.";
+        alert(err);
+        throw new Error(err);
     }
     try {
         if (projectToDelete.image) {
@@ -189,6 +194,7 @@ const App: React.FC = () => {
     } catch (error) {
         console.error('Error deleting project:', error);
         alert('Failed to delete project.');
+        throw error;
     }
   };
 

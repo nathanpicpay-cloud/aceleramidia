@@ -71,9 +71,9 @@ const SiteSettings: React.FC<SiteSettingsProps> = ({ onConfigSave }) => {
 
 interface AdminDashboardProps {
     projects: Project[];
-    onAddProject: (project: Omit<Project, 'id' | 'created_at' | 'updated_at'>) => void;
-    onUpdateProject: (project: Pick<Project, 'id' | 'name' | 'image' | 'link'>) => void;
-    onDeleteProject: (project: Project) => void;
+    onAddProject: (project: Omit<Project, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+    onUpdateProject: (project: Pick<Project, 'id' | 'name' | 'image' | 'link'>) => Promise<void>;
+    onDeleteProject: (project: Project) => Promise<void>;
     onLogout: () => void;
     onConfigSave: (config: string) => boolean;
     firebase: FirebaseInstances | null;
