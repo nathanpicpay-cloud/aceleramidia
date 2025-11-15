@@ -82,6 +82,14 @@ interface AdminDashboardProps {
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
     const [activeTab, setActiveTab] = useState('projects');
 
+    useEffect(() => {
+        // If firebase is not configured, force the user to the settings page for a better UX.
+        if (!props.firebase) {
+            setActiveTab('settings');
+        }
+    }, [props.firebase]);
+
+
     return (
         <div className="bg-zinc-900 text-white min-h-screen flex font-sans">
             <aside className="w-64 bg-black p-6 flex flex-col justify-between border-r border-zinc-800">
@@ -128,7 +136,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                     />
                 )}
                 {activeTab === 'settings' && (
-                   <SiteSettings onConfigSave={props.onConfigSave} />
+                   <>
+                        {!props.firebase && (
+                            <div className="bg-blue-900/50 border border-blue-700 text-blue-200 p-4 rounded-lg mb-8 text-center animate-pulse">
+                                <p className="font-bold text-lg">Configuration Required</p>
+                                <p className="text-sm">Welcome! Please provide your Firebase configuration below to enable all admin features.</p>
+                            </div>
+                        )}
+                       <SiteSettings onConfigSave={props.onConfigSave} />
+                   </>
                 )}
             </main>
         </div>
