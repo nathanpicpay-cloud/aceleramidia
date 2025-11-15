@@ -63,16 +63,29 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
+  const resetForm = () => {
+    setEditingProject(null);
+    setFormData({ name: '', link: '' });
+    setImageFile(null);
+    setPreviewUrl('');
+    setError(null);
+    const fileInput = document.getElementById('image-upload') as HTMLInputElement;
+    if (fileInput) {
+        fileInput.value = '';
+    }
+  };
+
   useEffect(() => {
     if (editingProject) {
       setFormData({ name: editingProject.name, link: editingProject.link });
       setPreviewUrl(editingProject.image);
+      setImageFile(null);
+      setError(null);
     } else {
-      setFormData({ name: '', link: '' });
-      setPreviewUrl('');
+        // Only reset if not editing.
+        // This prevents form clearing during an edit action.
+        resetForm();
     }
-    setImageFile(null);
-    setError(null);
   }, [editingProject]);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -92,11 +105,10 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    // --- Validation ---
     if (!formData.name || !formData.link) {
       setError("Project Name and Link URL are required.");
       return;
@@ -111,21 +123,21 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
     }
 
     setIsUploading(true);
+    let newImageUrl: string | null = null;
+    
     try {
-        let finalImageUrl = editingProject?.image || '';
         const oldImageUrl = editingProject?.image;
 
-        // 1. Handle new file upload if it exists
         if (imageFile) {
             const imageRef = ref(storage, `project-images/${Date.now()}_${imageFile.name}`);
             const uploadResult = await uploadBytes(imageRef, imageFile);
-            finalImageUrl = await getDownloadURL(uploadResult.ref);
+            newImageUrl = await getDownloadURL(uploadResult.ref);
         }
+
+        const finalImageUrl = newImageUrl || oldImageUrl;
         
         if (!finalImageUrl) {
-            setError("A project image is required.");
-            setIsUploading(false);
-            return;
+            throw new Error("Project image is missing. Please select an image to upload.");
         }
 
         const projectData = {
@@ -134,34 +146,38 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
             link: formData.link,
         };
 
-        // 2. Save data to Firestore
         if (editingProject) {
             await onUpdateProject({ ...projectData, id: editingProject.id });
         } else {
             await onAddProject(projectData);
         }
 
-        // 3. If update was successful, a new image was uploaded, and there was an old image, delete the old one.
-        if (imageFile && oldImageUrl && oldImageUrl.includes('firebasestorage.googleapis.com')) {
+        if (newImageUrl && oldImageUrl && oldImageUrl.includes('firebasestorage.googleapis.com')) {
             try {
-                // Do not delete if the URL is the same (can happen in rare cases)
-                if (oldImageUrl !== finalImageUrl) {
-                    const oldImageRef = ref(storage, oldImageUrl);
-                    await deleteObject(oldImageRef);
-                }
-            } catch (deleteError: any) {
-                console.warn("Successfully saved project, but failed to delete old image.", deleteError);
+                const oldImageRef = ref(storage, oldImageUrl);
+                await deleteObject(oldImageRef);
+            } catch (deleteError) {
+                console.warn("Project saved, but failed to delete old image:", deleteError);
             }
         }
       
-        // 4. Reset form on success
-        setEditingProject(null);
+        resetForm();
 
     } catch (err: any) {
         console.error("Failed to save project:", err);
         setError(err.message || 'An unexpected error occurred. Please check console for details.');
+
+        if (newImageUrl) {
+            console.log("Database operation failed. Cleaning up orphaned image...");
+            try {
+                const orphanRef = ref(storage, newImageUrl);
+                await deleteObject(orphanRef);
+                console.log("Orphaned image deleted.");
+            } catch (cleanupError) {
+                console.error("Failed to clean up orphaned image. Manual deletion may be required:", newImageUrl, cleanupError);
+            }
+        }
     } finally {
-        // 5. ALWAYS reset loading state
         setIsUploading(false);
     }
   };
