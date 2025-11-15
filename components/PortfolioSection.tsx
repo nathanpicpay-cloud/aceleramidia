@@ -7,10 +7,11 @@ interface PortfolioSectionProps {
 }
 
 const PortfolioItemCard: React.FC<Project> = ({ name, image, link, updated_at }) => {
-  // Only add cache-busting query params to Firebase Storage URLs to avoid breaking external links
+  // Firebase Storage URLs from getDownloadURL include a token. Appending another parameter requires an '&'.
+  // This logic correctly appends a cache-busting parameter without breaking the download token.
   const isFirebaseImage = image && image.includes('firebasestorage.googleapis.com');
   const imageUrl = isFirebaseImage && updated_at 
-    ? `${image}?v=${new Date(updated_at).getTime()}` 
+    ? `${image}&v=${new Date(updated_at).getTime()}` 
     : image;
 
   return (
