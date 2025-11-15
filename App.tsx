@@ -10,8 +10,8 @@ import TeamSection from './components/TeamSection';
 import ContactSection from './components/ContactSection';
 import Footer from './components/Footer';
 import SparklesBackground from './components/SparklesBackground';
-import AdminPanel from './components/AdminPanel';
-import LoginModal from './components/LoginModal';
+import AdminDashboard from './pages/AdminDashboard';
+import LoginPage from './pages/LoginPage';
 import { db, storage } from './lib/firebaseClient';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { ref, deleteObject } from 'firebase/storage';
@@ -28,11 +28,10 @@ export interface Project {
 const App: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
-  // Changed from pathname to hash for SPA routing to prevent 404s
   const [route, setRoute] = useState(window.location.hash.substring(1) || '/');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Listen to hash changes to update the route
     const handleHashChange = () => {
       setRoute(window.location.hash.substring(1) || '/');
     };
@@ -41,15 +40,17 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Check session storage for admin status on initial load
-    if (sessionStorage.getItem('isAdmin') === 'true') {
-      setIsAdmin(true);
-    }
+    const checkAuthAndFetchData = async () => {
+      setIsLoading(true);
+      // Check session storage for admin status
+      if (sessionStorage.getItem('isAdmin') === 'true') {
+        setIsAdmin(true);
+      }
 
-    // Fetch initial projects from Firestore
-    const fetchProjects = async () => {
+      // Fetch initial projects from Firestore
       if (!db) {
         console.warn("Firestore is not initialized. Cannot fetch projects.");
+        setIsLoading(false);
         return;
       }
       try {
@@ -63,7 +64,6 @@ const App: React.FC = () => {
                 name: data.name,
                 image: data.image,
                 link: data.link,
-                // Convert Firestore Timestamps to ISO strings
                 created_at: (data.created_at as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
                 updated_at: (data.updated_at as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
             };
@@ -73,18 +73,17 @@ const App: React.FC = () => {
         console.error("Error fetching projects:", error);
         alert("Could not load projects. Please check your connection and refresh the page.");
       }
+      setIsLoading(false);
     };
 
-    fetchProjects();
+    checkAuthAndFetchData();
   }, []);
   
   const handleLoginAttempt = (password: string) => {
-    // IMPORTANT: This is an insecure method of authentication and should be
-    // replaced with a proper auth system (like Firebase Auth) for production.
     if (password === '777') { 
       setIsAdmin(true);
       sessionStorage.setItem('isAdmin', 'true');
-      alert('Login successful!');
+      window.location.hash = '/admin'; // Redirect to admin dashboard
     } else {
       alert('Incorrect password.');
     }
@@ -93,7 +92,7 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setIsAdmin(false);
     sessionStorage.removeItem('isAdmin');
-    window.location.hash = '/'; // Navigate to home using hash
+    window.location.hash = '/'; 
   }
 
   const addProject = async (project: Omit<Project, 'id' | 'created_at' | 'updated_at'>) => {
@@ -107,7 +106,6 @@ const App: React.FC = () => {
         created_at: serverTimestamp(),
         updated_at: serverTimestamp(),
       });
-      // Add to local state immediately for instant UI update
       const newProject: Project = {
         ...project,
         id: docRef.id,
@@ -134,7 +132,6 @@ const App: React.FC = () => {
             updated_at: serverTimestamp(),
         });
 
-        // Update local state for instant UI feedback
         const updatedProjectInState = {
             ...projectToUpdate,
             created_at: projects.find(p => p.id === id)?.created_at || new Date().toISOString(),
@@ -157,77 +154,86 @@ const App: React.FC = () => {
         return;
     }
     try {
-        // 1. Delete the image from Firebase Storage
         if (projectToDelete.image) {
-            // Firebase Storage SDK's refFromURL can handle the public URL directly
             const imageRef = ref(storage, projectToDelete.image);
             await deleteObject(imageRef).catch(error => {
-                // It's okay if the image doesn't exist, log a warning but don't block deletion.
                 if (error.code !== 'storage/object-not-found') {
                     throw error;
                 }
                 console.warn("Image not found in storage, but proceeding with DB deletion.");
             });
         }
-
-        // 2. Delete the record from the database
         await deleteDoc(doc(db, 'projects', projectToDelete.id));
-        
-        // 3. Update the local state
         setProjects(prevProjects => prevProjects.filter(p => p.id !== projectToDelete.id));
     } catch (error) {
         console.error('Error deleting project:', error);
         alert('Failed to delete project.');
     }
   };
-  
-  if (route.toLowerCase().startsWith('/admin')) {
-    if (isAdmin) {
-      return (
-        <AdminPanel
-          isOpen={true}
-          onClose={() => { window.location.hash = '/' }}
-          projects={projects}
-          onAddProject={addProject}
-          onUpdateProject={updateProject}
-          onDeleteProject={deleteProject}
-        />
-      );
-    } else {
-      return (
-        <div className="bg-black min-h-screen">
-            <LoginModal
-              onClose={() => { window.location.hash = '/' }}
-              onLoginSubmit={handleLoginAttempt}
-            />
-        </div>
-      );
-    }
-  }
 
-  return (
-    <div className="bg-black text-white overflow-x-hidden relative">
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute -top-1/4 -left-1/4 w-3/4 h-3/4 bg-[#FF007F] rounded-full blur-[200px] opacity-10"></div>
-        <div className="absolute -bottom-1/4 -right-1/4 w-3/4 h-3/4 bg-purple-600 rounded-full blur-[200px] opacity-10"></div>
+  const renderContent = () => {
+    if (isLoading) {
+        return (
+            <div className="bg-black min-h-screen flex items-center justify-center">
+                <p className="text-white">Loading...</p>
+            </div>
+        );
+    }
+
+    const cleanRoute = route.toLowerCase();
+
+    if (cleanRoute.startsWith('/admin')) {
+      if (isAdmin) {
+        return (
+          <AdminDashboard 
+            projects={projects}
+            onAddProject={addProject}
+            onUpdateProject={updateProject}
+            onDeleteProject={deleteProject}
+            onLogout={handleLogout}
+          />
+        );
+      } else {
+        // Redirect to login if not authenticated and not already there
+        if (cleanRoute !== '/login') {
+            window.location.hash = '/login';
+        }
+        // Render login page while redirecting
+        return <LoginPage onLoginSubmit={handleLoginAttempt} />;
+      }
+    }
+
+    if (cleanRoute.startsWith('/login')) {
+        return <LoginPage onLoginSubmit={handleLoginAttempt} />;
+    }
+
+    // Default route: main site
+    return (
+      <div className="bg-black text-white overflow-x-hidden relative">
+        <div className="fixed inset-0 z-0 pointer-events-none">
+          <div className="absolute -top-1/4 -left-1/4 w-3/4 h-3/4 bg-[#FF007F] rounded-full blur-[200px] opacity-10"></div>
+          <div className="absolute -bottom-1/4 -right-1/4 w-3/4 h-3/4 bg-purple-600 rounded-full blur-[200px] opacity-10"></div>
+        </div>
+        <SparklesBackground className="fixed inset-0 z-0" />
+        
+        <Header isAdmin={isAdmin} onLogout={handleLogout} />
+        
+        <main className="relative z-10">
+          <HeroSection />
+          <BenefitsSection />
+          <PortfolioSection projects={projects} />
+          <AboutSection />
+          <ServicesSection />
+          <TeamSection />
+          <ContactSection />
+        </main>
+        
+        <Footer />
       </div>
-      <SparklesBackground className="fixed inset-0 z-0" />
-      
-      <Header isAdmin={isAdmin} onLogout={handleLogout} />
-      
-      <main className="relative z-10">
-        <HeroSection />
-        <BenefitsSection />
-        <PortfolioSection projects={projects} />
-        <AboutSection />
-        <ServicesSection />
-        <TeamSection />
-        <ContactSection />
-      </main>
-      
-      <Footer />
-    </div>
-  );
+    );
+  };
+  
+  return renderContent();
 };
 
 export default App;

@@ -1,11 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import type { Project } from '../App';
 import { storage } from '../lib/firebaseClient';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
-interface AdminPanelProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface ProjectManagerProps {
   projects: Project[];
   onAddProject: (project: Omit<Project, 'id' | 'created_at' | 'updated_at'>) => void;
   onUpdateProject: (project: Pick<Project, 'id' | 'name' | 'image' | 'link'>) => void;
@@ -54,7 +53,7 @@ const ProjectListItem: React.FC<{
   );
 };
 
-const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, projects, onAddProject, onUpdateProject, onDeleteProject }) => {
+const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject, onUpdateProject, onDeleteProject }) => {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [formData, setFormData] = useState({ name: '', image: '', link: '' });
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -72,13 +71,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, projects, onAd
     setImageFile(null);
   }, [editingProject]);
   
-  if (!isOpen) return null;
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     if (name === 'image') {
-      setPreviewUrl(value); // Update preview if URL is pasted manually
+      setPreviewUrl(value);
     }
   };
 
@@ -109,10 +106,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, projects, onAd
     setIsUploading(true);
     let finalImageUrl = formData.image;
 
-    // If a new file is selected, upload it to Firebase Storage
     if (imageFile) {
       try {
-        // If we are editing an existing project, delete the old image first.
         if (editingProject?.image) {
           const oldImageRef = ref(storage, editingProject.image);
           await deleteObject(oldImageRef).catch(err => {
@@ -121,7 +116,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, projects, onAd
           });
         }
 
-        // Upload the new image
         const imageRef = ref(storage, `project-images/${Date.now()}_${imageFile.name}`);
         const uploadResult = await uploadBytes(imageRef, imageFile);
         finalImageUrl = await getDownloadURL(uploadResult.ref);
@@ -167,16 +161,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, projects, onAd
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4">
-      <div className="bg-zinc-900 border border-zinc-700 rounded-lg w-full max-w-3xl max-h-[90vh] flex flex-col">
-        <div className="p-4 border-b border-zinc-700 flex justify-between items-center">
-          <h2 className="text-xl font-bold">Admin Panel - Manage Projects</h2>
-          <button onClick={onClose} className="text-zinc-400 hover:text-white">&times;</button>
-        </div>
-
-        <div className="p-6 overflow-y-auto">
-          <div id="project-form" className="bg-zinc-800 p-4 rounded-lg mb-6">
-            <h3 className="font-bold mb-4 text-lg">{editingProject ? 'Edit Project' : 'Add New Project'}</h3>
+    <div className="w-full max-w-4xl mx-auto text-white">
+        <div id="project-form" className="bg-zinc-800/50 border border-zinc-700 p-6 rounded-lg mb-8">
+            <h3 className="font-bold mb-4 text-xl">{editingProject ? 'Edit Project' : 'Add New Project'}</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <input type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="Project Name" required className="w-full bg-zinc-700 p-2 rounded text-white placeholder-zinc-400"/>
               
@@ -229,7 +216,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, projects, onAd
           </div>
 
           <div>
-            <h3 className="font-bold mb-4 text-lg">Existing Projects</h3>
+            <h3 className="font-bold mb-4 text-xl">Existing Projects</h3>
             <div className="space-y-3">
               {projects.map((project) => (
                 <ProjectListItem
@@ -241,10 +228,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, projects, onAd
               ))}
             </div>
           </div>
-        </div>
-      </div>
     </div>
   );
 };
 
-export default AdminPanel;
+export default ProjectManager;
