@@ -1,14 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
 import type { Project } from '../App';
-import { storage } from '../lib/firebaseClient';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject, FirebaseStorage } from 'firebase/storage';
 
 interface ProjectManagerProps {
   projects: Project[];
   onAddProject: (project: Omit<Project, 'id' | 'created_at' | 'updated_at'>) => void;
   onUpdateProject: (project: Pick<Project, 'id' | 'name' | 'image' | 'link'>) => void;
   onDeleteProject: (project: Project) => void;
+  storage: FirebaseStorage | null;
 }
 
 const ProjectListItem: React.FC<{
@@ -53,7 +53,7 @@ const ProjectListItem: React.FC<{
   );
 };
 
-const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject, onUpdateProject, onDeleteProject }) => {
+const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject, onUpdateProject, onDeleteProject, storage }) => {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [formData, setFormData] = useState({ name: '', image: '', link: '' });
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -99,7 +99,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
     }
 
     if (!storage) {
-        alert("Storage is not configured. Cannot upload image.");
+        alert("Storage is not configured. Please go to Site Settings to configure your Firebase connection.");
         return;
     }
 
@@ -109,11 +109,13 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
     if (imageFile) {
       try {
         if (editingProject?.image) {
-          const oldImageRef = ref(storage, editingProject.image);
-          await deleteObject(oldImageRef).catch(err => {
-            if (err.code !== 'storage/object-not-found') throw err;
-            console.warn("Old image not found, proceeding with upload.");
-          });
+          try {
+            const oldImageRef = ref(storage, editingProject.image);
+            await deleteObject(oldImageRef);
+          } catch (err: any) {
+             if (err.code !== 'storage/object-not-found') throw err;
+             console.warn("Old image not found, proceeding with upload.");
+          }
         }
 
         const imageRef = ref(storage, `project-images/${Date.now()}_${imageFile.name}`);
@@ -162,7 +164,13 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
 
   return (
     <div className="w-full max-w-4xl mx-auto text-white">
-        <div id="project-form" className="bg-zinc-800/50 border border-zinc-700 p-6 rounded-lg mb-8">
+        {!storage && (
+            <div className="bg-yellow-900/50 border border-yellow-700 text-yellow-300 p-4 rounded-lg mb-8 text-center">
+                <p className="font-bold">Firebase Not Configured</p>
+                <p className="text-sm">Image and project management is disabled. Please go to <span className="font-semibold">Site Settings</span> to provide your Firebase configuration.</p>
+            </div>
+        )}
+        <div id="project-form" className={`bg-zinc-800/50 border border-zinc-700 p-6 rounded-lg mb-8 transition-opacity ${!storage ? 'opacity-50 pointer-events-none' : ''}`}>
             <h3 className="font-bold mb-4 text-xl">{editingProject ? 'Edit Project' : 'Add New Project'}</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <input type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="Project Name" required className="w-full bg-zinc-700 p-2 rounded text-white placeholder-zinc-400"/>

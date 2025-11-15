@@ -12,7 +12,7 @@ import Footer from './components/Footer';
 import SparklesBackground from './components/SparklesBackground';
 import AdminDashboard from './pages/AdminDashboard';
 import LoginPage from './pages/LoginPage';
-import { db, storage } from './lib/firebaseClient';
+import { initializeFirebase, FirebaseInstances } from './lib/firebaseClient';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { ref, deleteObject } from 'firebase/storage';
 
@@ -30,6 +30,24 @@ const App: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [route, setRoute] = useState(window.location.hash.substring(1) || '/');
   const [isLoading, setIsLoading] = useState(true);
+  const [firebase, setFirebase] = useState<FirebaseInstances | null>(null);
+
+  useEffect(() => {
+    // Attempt to initialize Firebase from localStorage on initial load
+    const savedConfig = localStorage.getItem('firebaseConfig');
+    if (savedConfig) {
+      try {
+        const config = JSON.parse(savedConfig);
+        const instances = initializeFirebase(config);
+        if (instances) {
+          setFirebase(instances);
+        }
+      } catch (e) {
+        console.error("Failed to parse or initialize with saved Firebase config.", e);
+        localStorage.removeItem('firebaseConfig'); // Clear invalid config
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -42,19 +60,17 @@ const App: React.FC = () => {
   useEffect(() => {
     const checkAuthAndFetchData = async () => {
       setIsLoading(true);
-      // Check session storage for admin status
       if (sessionStorage.getItem('isAdmin') === 'true') {
         setIsAdmin(true);
       }
 
-      // Fetch initial projects from Firestore
-      if (!db) {
-        console.warn("Firestore is not initialized. Cannot fetch projects.");
+      if (!firebase?.db) {
+        setProjects([]);
         setIsLoading(false);
         return;
       }
       try {
-        const projectsCollection = collection(db, 'projects');
+        const projectsCollection = collection(firebase.db, 'projects');
         const q = query(projectsCollection, orderBy('created_at', 'desc'));
         const projectSnapshot = await getDocs(q);
         const projectList = projectSnapshot.docs.map(doc => {
@@ -77,13 +93,13 @@ const App: React.FC = () => {
     };
 
     checkAuthAndFetchData();
-  }, []);
+  }, [firebase]);
   
   const handleLoginAttempt = (password: string) => {
     if (password === '777') { 
       setIsAdmin(true);
       sessionStorage.setItem('isAdmin', 'true');
-      window.location.hash = '/admin'; // Redirect to admin dashboard
+      window.location.hash = '/admin';
     } else {
       alert('Incorrect password.');
     }
@@ -94,14 +110,31 @@ const App: React.FC = () => {
     sessionStorage.removeItem('isAdmin');
     window.location.hash = '/'; 
   }
+  
+  const handleConfigSave = (configString: string) => {
+    try {
+      const config = JSON.parse(configString);
+      const instances = initializeFirebase(config);
+      if (instances) {
+        setFirebase(instances);
+        localStorage.setItem('firebaseConfig', configString);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      alert("Invalid JSON format for Firebase config.");
+      console.error("Error parsing Firebase config:", e);
+      return false;
+    }
+  };
 
   const addProject = async (project: Omit<Project, 'id' | 'created_at' | 'updated_at'>) => {
-     if (!db) {
-        alert("Database not connected. Cannot add project.");
+     if (!firebase?.db) {
+        alert("Database not connected. Please configure Firebase in Site Settings.");
         return;
       }
     try {
-      const docRef = await addDoc(collection(db, 'projects'), {
+      const docRef = await addDoc(collection(firebase.db, 'projects'), {
         ...project,
         created_at: serverTimestamp(),
         updated_at: serverTimestamp(),
@@ -120,13 +153,13 @@ const App: React.FC = () => {
   };
 
   const updateProject = async (projectToUpdate: Pick<Project, 'id' | 'name' | 'image' | 'link'>) => {
-    if (!db) {
+    if (!firebase?.db) {
         alert("Database not connected. Cannot update project.");
         return;
     }
     const { id, ...updateData } = projectToUpdate;
     try {
-        const projectDoc = doc(db, 'projects', id);
+        const projectDoc = doc(firebase.db, 'projects', id);
         await updateDoc(projectDoc, {
             ...updateData,
             updated_at: serverTimestamp(),
@@ -149,13 +182,13 @@ const App: React.FC = () => {
 
 
   const deleteProject = async (projectToDelete: Project) => {
-     if (!db || !storage) {
+     if (!firebase?.db || !firebase?.storage) {
         alert("Database or Storage not connected. Cannot delete project.");
         return;
     }
     try {
         if (projectToDelete.image) {
-            const imageRef = ref(storage, projectToDelete.image);
+            const imageRef = ref(firebase.storage, projectToDelete.image);
             await deleteObject(imageRef).catch(error => {
                 if (error.code !== 'storage/object-not-found') {
                     throw error;
@@ -163,7 +196,7 @@ const App: React.FC = () => {
                 console.warn("Image not found in storage, but proceeding with DB deletion.");
             });
         }
-        await deleteDoc(doc(db, 'projects', projectToDelete.id));
+        await deleteDoc(doc(firebase.db, 'projects', projectToDelete.id));
         setProjects(prevProjects => prevProjects.filter(p => p.id !== projectToDelete.id));
     } catch (error) {
         console.error('Error deleting project:', error);
@@ -172,7 +205,7 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
-    if (isLoading) {
+    if (isLoading && !firebase) {
         return (
             <div className="bg-black min-h-screen flex items-center justify-center">
                 <p className="text-white">Loading...</p>
@@ -191,14 +224,14 @@ const App: React.FC = () => {
             onUpdateProject={updateProject}
             onDeleteProject={deleteProject}
             onLogout={handleLogout}
+            onConfigSave={handleConfigSave}
+            firebase={firebase}
           />
         );
       } else {
-        // Redirect to login if not authenticated and not already there
         if (cleanRoute !== '/login') {
             window.location.hash = '/login';
         }
-        // Render login page while redirecting
         return <LoginPage onLoginSubmit={handleLoginAttempt} />;
       }
     }
@@ -207,7 +240,6 @@ const App: React.FC = () => {
         return <LoginPage onLoginSubmit={handleLoginAttempt} />;
     }
 
-    // Default route: main site
     return (
       <div className="bg-black text-white overflow-x-hidden relative">
         <div className="fixed inset-0 z-0 pointer-events-none">
