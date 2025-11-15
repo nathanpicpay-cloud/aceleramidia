@@ -3,11 +3,10 @@ import React, { useState, useEffect } from 'react';
 
 interface HeaderProps {
   isAdmin: boolean;
-  onAdminClick: () => void;
   onLogout: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ isAdmin, onAdminClick, onLogout }) => {
+const Header: React.FC<HeaderProps> = ({ isAdmin, onLogout }) => {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -40,12 +39,7 @@ const Header: React.FC<HeaderProps> = ({ isAdmin, onAdminClick, onLogout }) => {
         </nav>
         <div className="hidden md:flex items-center space-x-4">
           {isAdmin && (
-            <>
-              <button onClick={onAdminClick} className="bg-blue-600 text-white font-bold py-2 px-6 rounded-full text-sm hover:bg-opacity-80 transition-all duration-300 shadow-[0_0_15px_rgba(59,130,246,0.5)]">
-                Painel Admin
-              </button>
-               <button onClick={onLogout} className="text-zinc-400 hover:text-white text-sm">Sair</button>
-            </>
+             <button onClick={onLogout} className="text-zinc-400 hover:text-white text-sm">Sair</button>
           )}
           <a href="#contato" className="inline-block bg-[#FF007F] text-white font-bold py-2 px-6 rounded-full text-sm hover:bg-opacity-80 transition-all duration-300 shadow-[0_0_15px_rgba(255,0,127,0.5)]">
             Contato

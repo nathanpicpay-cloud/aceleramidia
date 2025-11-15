@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
@@ -11,10 +12,12 @@ import Footer from './components/Footer';
 import SparklesBackground from './components/SparklesBackground';
 import AdminPanel from './components/AdminPanel';
 import LoginModal from './components/LoginModal';
-import * as api from './lib/apiClient';
+import { db, storage } from './lib/firebaseClient';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { ref, deleteObject } from 'firebase/storage';
 
 export interface Project {
-  id: number;
+  id: string; // Firestore uses string IDs
   name: string;
   image: string;
   link: string;
@@ -25,96 +28,172 @@ export interface Project {
 const App: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [route] = useState(window.location.pathname);
 
   useEffect(() => {
-    // Verificar status de admin no sessionStorage
+    // Check session storage for admin status on initial load
     if (sessionStorage.getItem('isAdmin') === 'true') {
       setIsAdmin(true);
     }
 
-    // Buscar projetos da API
-    loadProjects();
+    // Fetch initial projects from Firestore
+    const fetchProjects = async () => {
+      if (!db) {
+        console.warn("Firestore is not initialized. Cannot fetch projects.");
+        return;
+      }
+      try {
+        const projectsCollection = collection(db, 'projects');
+        const q = query(projectsCollection, orderBy('created_at', 'desc'));
+        const projectSnapshot = await getDocs(q);
+        const projectList = projectSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                name: data.name,
+                image: data.image,
+                link: data.link,
+                // Convert Firestore Timestamps to ISO strings
+                created_at: (data.created_at as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
+                updated_at: (data.updated_at as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
+            };
+        });
+        setProjects(projectList);
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+        alert("Could not load projects. Please check your connection and refresh the page.");
+      }
+    };
+
+    fetchProjects();
   }, []);
-
-  const loadProjects = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const projectsData = await api.fetchProjects();
-      setProjects(projectsData);
-    } catch (error) {
-      console.error("Erro ao carregar projetos:", error);
-      setError("Não foi possível carregar os projetos. Verifique se o servidor está rodando.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  
   const handleLoginAttempt = (password: string) => {
-    // IMPORTANTE: Em produção, use autenticação adequada (JWT, OAuth, etc.)
+    // IMPORTANT: This is an insecure method of authentication and should be
+    // replaced with a proper auth system (like Firebase Auth) for production.
     if (password === '777') { 
       setIsAdmin(true);
       sessionStorage.setItem('isAdmin', 'true');
-      setIsLoginModalOpen(false);
-      setIsAdminPanelOpen(true);
-      alert('Login realizado com sucesso!');
+      alert('Login successful!');
     } else {
-      alert('Senha incorreta.');
+      alert('Incorrect password.');
     }
   };
 
   const handleLogout = () => {
     setIsAdmin(false);
     sessionStorage.removeItem('isAdmin');
-    setIsAdminPanelOpen(false);
-  };
+    window.location.href = '/';
+  }
 
-  const addProject = async (name: string, imageFile: File, link: string) => {
+  const addProject = async (project: Omit<Project, 'id' | 'created_at' | 'updated_at'>) => {
+     if (!db) {
+        alert("Database not connected. Cannot add project.");
+        return;
+      }
     try {
-      const newProject = await api.createProject(name, imageFile, link);
+      const docRef = await addDoc(collection(db, 'projects'), {
+        ...project,
+        created_at: serverTimestamp(),
+        updated_at: serverTimestamp(),
+      });
+      // Add to local state immediately for instant UI update
+      const newProject: Project = {
+        ...project,
+        id: docRef.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
       setProjects(prevProjects => [newProject, ...prevProjects]);
-      alert('Projeto adicionado com sucesso!');
     } catch (error) {
-      console.error('Erro ao adicionar projeto:', error);
-      alert('Falha ao adicionar projeto. Verifique o console para mais detalhes.');
+      console.error('Error adding project:', error);
+      alert('Failed to add project.');
     }
   };
 
-  const updateProject = async (id: number, name: string, link: string, imageFile?: File) => {
+  const updateProject = async (projectToUpdate: Pick<Project, 'id' | 'name' | 'image' | 'link'>) => {
+    if (!db) {
+        alert("Database not connected. Cannot update project.");
+        return;
+    }
+    const { id, ...updateData } = projectToUpdate;
     try {
-      const updatedProject = await api.updateProject(id, name, link, imageFile);
-      setProjects(prevProjects => 
-        prevProjects.map(p => (p.id === id ? updatedProject : p))
-      );
-      alert('Projeto atualizado com sucesso!');
+        const projectDoc = doc(db, 'projects', id);
+        await updateDoc(projectDoc, {
+            ...updateData,
+            updated_at: serverTimestamp(),
+        });
+
+        // Update local state for instant UI feedback
+        const updatedProjectInState = {
+            ...projectToUpdate,
+            created_at: projects.find(p => p.id === id)?.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        };
+
+        setProjects(prevProjects => 
+            prevProjects.map(p => (p.id === id ? updatedProjectInState : p))
+        );
     } catch (error) {
-      console.error('Erro ao atualizar projeto:', error);
-      alert('Falha ao atualizar projeto. Verifique o console para mais detalhes.');
+        console.error('Error updating project:', error);
+        alert('Failed to update project.');
     }
   };
 
-  const deleteProject = async (id: number) => {
+
+  const deleteProject = async (projectToDelete: Project) => {
+     if (!db || !storage) {
+        alert("Database or Storage not connected. Cannot delete project.");
+        return;
+    }
     try {
-      await api.deleteProject(id);
-      setProjects(prevProjects => prevProjects.filter(p => p.id !== id));
-      alert('Projeto deletado com sucesso!');
+        // 1. Delete the image from Firebase Storage
+        if (projectToDelete.image) {
+            // Firebase Storage SDK's refFromURL can handle the public URL directly
+            const imageRef = ref(storage, projectToDelete.image);
+            await deleteObject(imageRef).catch(error => {
+                // It's okay if the image doesn't exist, log a warning but don't block deletion.
+                if (error.code !== 'storage/object-not-found') {
+                    throw error;
+                }
+                console.warn("Image not found in storage, but proceeding with DB deletion.");
+            });
+        }
+
+        // 2. Delete the record from the database
+        await deleteDoc(doc(db, 'projects', projectToDelete.id));
+        
+        // 3. Update the local state
+        setProjects(prevProjects => prevProjects.filter(p => p.id !== projectToDelete.id));
     } catch (error) {
-      console.error('Erro ao deletar projeto:', error);
-      alert('Falha ao deletar projeto. Verifique o console para mais detalhes.');
+        console.error('Error deleting project:', error);
+        alert('Failed to delete project.');
     }
   };
-
-  const handleAdminAction = () => {
+  
+  if (route.toLowerCase().startsWith('/admin')) {
     if (isAdmin) {
-      setIsAdminPanelOpen(true);
+      return (
+        <AdminPanel
+          isOpen={true}
+          onClose={() => { window.location.href = '/' }}
+          projects={projects}
+          onAddProject={addProject}
+          onUpdateProject={updateProject}
+          onDeleteProject={deleteProject}
+        />
+      );
     } else {
-      setIsLoginModalOpen(true);
+      return (
+        <div className="bg-black min-h-screen">
+            <LoginModal
+              onClose={() => { window.location.href = '/' }}
+              onLoginSubmit={handleLoginAttempt}
+            />
+        </div>
+      );
     }
-  };
+  }
 
   return (
     <div className="bg-black text-white overflow-x-hidden relative">
@@ -124,55 +203,19 @@ const App: React.FC = () => {
       </div>
       <SparklesBackground className="fixed inset-0 z-0" />
       
-      <Header isAdmin={isAdmin} onAdminClick={handleAdminAction} onLogout={handleLogout} />
+      <Header isAdmin={isAdmin} onLogout={handleLogout} />
       
       <main className="relative z-10">
         <HeroSection />
         <BenefitsSection />
-        
-        {isLoading ? (
-          <div className="py-20 text-center">
-            <p className="text-zinc-400">Carregando projetos...</p>
-          </div>
-        ) : error ? (
-          <div className="py-20 text-center">
-            <p className="text-red-500">{error}</p>
-            <button 
-              onClick={loadProjects}
-              className="mt-4 bg-[#FF007F] text-white font-bold py-2 px-6 rounded-full hover:bg-opacity-80 transition-all"
-            >
-              Tentar Novamente
-            </button>
-          </div>
-        ) : (
-          <PortfolioSection projects={projects} />
-        )}
-        
+        <PortfolioSection projects={projects} />
         <AboutSection />
         <ServicesSection />
         <TeamSection />
-        <ContactSection isAdmin={isAdmin} onAdminClick={handleAdminAction} />
+        <ContactSection />
       </main>
       
       <Footer />
-
-      {isLoginModalOpen && (
-        <LoginModal
-          onClose={() => setIsLoginModalOpen(false)}
-          onLoginSubmit={handleLoginAttempt}
-        />
-      )}
-      
-      {isAdmin && (
-        <AdminPanel
-          isOpen={isAdminPanelOpen}
-          onClose={() => setIsAdminPanelOpen(false)}
-          projects={projects}
-          onAddProject={addProject}
-          onUpdateProject={updateProject}
-          onDeleteProject={deleteProject}
-        />
-      )}
     </div>
   );
 };

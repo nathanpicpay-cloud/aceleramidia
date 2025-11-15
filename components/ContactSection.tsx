@@ -2,12 +2,7 @@
 import React from 'react';
 import { Instagram, WhatsApp } from './Icons';
 
-interface ContactSectionProps {
-  isAdmin: boolean;
-  onAdminClick: () => void;
-}
-
-const ContactSection: React.FC<ContactSectionProps> = ({ isAdmin, onAdminClick }) => {
+const ContactSection: React.FC = () => {
   return (
     <section id="contato" className="py-20 md:py-32 relative overflow-hidden">
       <div className="container mx-auto px-6 relative z-10">
@@ -31,17 +26,6 @@ const ContactSection: React.FC<ContactSectionProps> = ({ isAdmin, onAdminClick }
                     <span>Instagram</span>
                 </a>
             </div>
-            {!isAdmin && (
-              <div className="mt-12">
-                  <button 
-                      onClick={onAdminClick}
-                      aria-label="Admin Login"
-                      className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors"
-                  >
-                      Admin
-                  </button>
-              </div>
-            )}
         </div>
       </div>
     </section>
