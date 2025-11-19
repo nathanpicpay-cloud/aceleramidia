@@ -18,6 +18,7 @@ import { AlertTriangle, Copy, RefreshCw, Check, ArrowRight } from 'lucide-react'
 export interface Project {
   id: string;
   name: string;
+  owner?: string; // Novo campo para o proprietário
   image: string;
   link: string;
   attachment?: string | null;
@@ -33,6 +34,7 @@ drop table if exists projects;
 create table projects (
   id uuid default gen_random_uuid() primary key,
   name text not null,
+  owner text, -- Coluna para o proprietário/cliente
   image text not null,
   link text not null,
   attachment text,
@@ -70,7 +72,7 @@ const DatabaseSetupScreen: React.FC<{ onRetry: () => void; onSkip: () => void }>
           <AlertTriangle size={48} />
           <div>
             <h1 className="text-2xl font-bold text-white">Database Permissions Error</h1>
-            <p className="text-zinc-400">Your database exists, but it's blocking write access (RLS Policy).</p>
+            <p className="text-zinc-400">Your database exists, but it's blocking write access (RLS Policy) or requires a schema update.</p>
           </div>
         </div>
 
@@ -153,6 +155,7 @@ const App: React.FC = () => {
       const projectList = (data || []).map((item: any) => ({
           id: item.id ? item.id.toString() : Math.random().toString(36).substr(2, 9), // Ensure ID exists
           name: item.name || 'Sem título',
+          owner: item.owner || '', // Map owner field
           image: item.image || '',
           link: item.link || '#',
           attachment: item.attachment || null,

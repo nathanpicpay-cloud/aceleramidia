@@ -40,6 +40,7 @@ const ProjectListItem: React.FC<{
         <img src={project.image} alt={project.name} className="w-16 h-16 object-cover rounded flex-shrink-0 bg-zinc-900" />
         <div className="overflow-hidden">
           <p className="font-semibold truncate">{project.name}</p>
+          {project.owner && <p className="text-xs text-zinc-500 truncate">Proprietário: {project.owner}</p>}
           <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-xs text-zinc-400 hover:text-blue-400 break-all truncate block">
             {project.link}
           </a>
@@ -60,7 +61,7 @@ const ProjectListItem: React.FC<{
 
 const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject, onUpdateProject, onDeleteProject }) => {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
-  const [formData, setFormData] = useState({ name: '', link: '', image: '', attachment: '' });
+  const [formData, setFormData] = useState({ name: '', owner: '', link: '', image: '', attachment: '' });
   const [isSaving, setIsSaving] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +69,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
 
   const resetForm = () => {
     setEditingProject(null);
-    setFormData({ name: '', link: '', image: '', attachment: '' });
+    setFormData({ name: '', owner: '', link: '', image: '', attachment: '' });
     setPreviewUrl('');
     setError(null);
     // Don't clear success message immediately so user can see it
@@ -79,6 +80,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
     if (editingProject) {
       setFormData({ 
         name: editingProject.name, 
+        owner: editingProject.owner || '',
         link: editingProject.link, 
         image: editingProject.image,
         attachment: editingProject.attachment || '' 
@@ -130,6 +132,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
     try {
         const projectData: Partial<Project> = {
             name: formData.name,
+            owner: formData.owner || undefined,
             link: formData.link,
             image: formData.image,
             attachment: formData.attachment || null,
@@ -142,7 +145,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
             await onAddProject(projectData as Omit<Project, 'id' | 'created_at' | 'updated_at'>);
             setSuccessMessage("Projeto adicionado com sucesso!");
             // Clear form data only on successful add (not edit, though logic handles resetForm)
-            setFormData({ name: '', link: '', image: '', attachment: '' });
+            setFormData({ name: '', owner: '', link: '', image: '', attachment: '' });
             setPreviewUrl('');
         }
         setEditingProject(null);
@@ -202,6 +205,8 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
             <form onSubmit={handleSubmit} className="space-y-4">
               <input type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="Nome do Projeto" required className="w-full bg-zinc-700 p-2 rounded text-white placeholder-zinc-400"/>
               
+              <input type="text" name="owner" value={formData.owner} onChange={handleInputChange} placeholder="Nome do Proprietário / Cliente" className="w-full bg-zinc-700 p-2 rounded text-white placeholder-zinc-400"/>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
                   <div>
                       <label htmlFor="image-url" className="block text-sm font-medium text-zinc-300 mb-2">
