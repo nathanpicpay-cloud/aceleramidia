@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
@@ -12,16 +11,14 @@ import Footer from './components/Footer';
 import SparklesBackground from './components/SparklesBackground';
 import AdminDashboard from './pages/AdminDashboard';
 import LoginPage from './pages/LoginPage';
-import { initializeFirebase, FirebaseInstances } from './lib/firebaseClient';
-import { firebaseConfig } from './lib/firebaseConfig';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, Timestamp } from 'firebase/firestore';
-import { ref, deleteObject } from 'firebase/storage';
+import { supabase } from './lib/supabaseClient';
 
 export interface Project {
-  id: string; // Firestore uses string IDs
+  id: string;
   name: string;
   image: string;
   link: string;
+  attachment?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -31,17 +28,6 @@ const App: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [route, setRoute] = useState(window.location.hash.substring(1) || '/');
   const [isLoading, setIsLoading] = useState(true);
-  const [firebase, setFirebase] = useState<FirebaseInstances | null>(null);
-
-  useEffect(() => {
-    // Initialize Firebase with the hardcoded config
-    const instances = initializeFirebase(firebaseConfig);
-    if (instances) {
-      setFirebase(instances);
-    } else {
-        setIsLoading(false); // Stop loading if firebase fails to init
-    }
-  }, []);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -52,35 +38,37 @@ const App: React.FC = () => {
   }, []);
 
   const fetchProjects = useCallback(async () => {
-    if (!firebase?.db) {
-      setProjects([]);
+    if (!supabase) {
+      console.warn("Supabase client not initialized. Check environment variables.");
       setIsLoading(false);
       return;
     }
     setIsLoading(true);
     try {
-      const projectsCollection = collection(firebase.db, 'projects');
-      const q = query(projectsCollection, orderBy('created_at', 'desc'));
-      const projectSnapshot = await getDocs(q);
-      const projectList = projectSnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-              id: doc.id,
-              name: data.name,
-              image: data.image,
-              link: data.link,
-              created_at: (data.created_at as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
-              updated_at: (data.updated_at as Timestamp)?.toDate().toISOString() || new Date().toISOString(),
-          };
-      });
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const projectList = (data || []).map((item: any) => ({
+          id: item.id.toString(), // Ensure ID is string
+          name: item.name,
+          image: item.image,
+          link: item.link,
+          attachment: item.attachment || null,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+      }));
       setProjects(projectList);
     } catch (error) {
       console.error("Error fetching projects:", error);
-      alert("Could not load projects. Please check your connection and refresh the page.");
+      // alert("Could not load projects.");
     } finally {
       setIsLoading(false);
     }
-  }, [firebase]);
+  }, []);
 
   useEffect(() => {
     const checkAuth = () => {
@@ -109,16 +97,16 @@ const App: React.FC = () => {
   }
 
   const addProject = async (project: Omit<Project, 'id' | 'created_at' | 'updated_at'>): Promise<void> => {
-     if (!firebase?.db) {
-        const err = "Database not connected. Please configure Firebase in Site Settings.";
-        throw new Error(err);
+     if (!supabase) {
+        throw new Error("Database not connected.");
       }
     try {
-      await addDoc(collection(firebase.db, 'projects'), {
-        ...project,
-        created_at: serverTimestamp(),
-        updated_at: serverTimestamp(),
-      });
+      const { error } = await supabase
+        .from('projects')
+        .insert([project]);
+        
+      if (error) throw error;
+      
       await fetchProjects();
     } catch (error) {
       console.error('Error adding project:', error);
@@ -127,18 +115,22 @@ const App: React.FC = () => {
     }
   };
 
-  const updateProject = async (projectToUpdate: Pick<Project, 'id' | 'name' | 'image' | 'link'>): Promise<void> => {
-    if (!firebase?.db) {
-        const err = "Database not connected. Cannot update project.";
-        throw new Error(err);
+  const updateProject = async (projectToUpdate: Partial<Project> & { id: string }): Promise<void> => {
+    if (!supabase) {
+        throw new Error("Database not connected.");
     }
     const { id, ...updateData } = projectToUpdate;
     try {
-        const projectDoc = doc(firebase.db, 'projects', id);
-        await updateDoc(projectDoc, {
-            ...updateData,
-            updated_at: serverTimestamp(),
-        });
+        const { error } = await supabase
+            .from('projects')
+            .update({
+                ...updateData,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', id);
+
+        if (error) throw error;
+        
         await fetchProjects();
     } catch (error) {
         console.error('Error updating project:', error);
@@ -147,31 +139,18 @@ const App: React.FC = () => {
     }
   };
 
-
   const deleteProject = async (projectToDelete: Project): Promise<void> => {
-     if (!firebase?.db || !firebase?.storage) {
-        const err = "Database or Storage not connected. Cannot delete project.";
-        throw new Error(err);
+     if (!supabase) {
+        throw new Error("Database not connected.");
     }
     try {
-        // First, delete the database record
-        await deleteDoc(doc(firebase.db, 'projects', projectToDelete.id));
+        const { error } = await supabase
+            .from('projects')
+            .delete()
+            .eq('id', projectToDelete.id);
 
-        // Then, if the image is hosted on Firebase, delete it from storage
-        if (projectToDelete.image && projectToDelete.image.includes('firebasestorage.googleapis.com')) {
-            const imageRef = ref(firebase.storage, projectToDelete.image);
-            await deleteObject(imageRef).catch(error => {
-                // If the object doesn't exist, we don't need to throw an error, just warn.
-                if (error.code === 'storage/object-not-found') {
-                    console.warn("Image not found in storage, but DB entry was deleted.");
-                } else {
-                    // For other errors, we should log them as it might indicate a problem.
-                    console.error("Error deleting image from storage:", error);
-                }
-            });
-        }
+        if (error) throw error;
         
-        // Finally, refetch the projects list to update the UI
         await fetchProjects();
     } catch (error) {
         console.error('Error deleting project:', error);
@@ -181,12 +160,8 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
-    if (isLoading && !firebase) {
-        return (
-            <div className="bg-black min-h-screen flex items-center justify-center">
-                <p className="text-white">Loading Firebase...</p>
-            </div>
-        );
+    if (isLoading && !projects.length && !supabase) {
+         // Optional: Render a different loading state if truly stuck
     }
 
     const cleanRoute = route.toLowerCase();
@@ -200,7 +175,7 @@ const App: React.FC = () => {
             onUpdateProject={updateProject}
             onDeleteProject={deleteProject}
             onLogout={handleLogout}
-            firebase={firebase}
+            isConnected={!!supabase}
           />
         );
       } else {

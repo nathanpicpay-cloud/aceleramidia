@@ -1,18 +1,15 @@
-
 import React from 'react';
 import type { Project } from '../App';
 import ProjectManager from '../components/AdminPanel';
 import { Home, LogOut, Briefcase } from 'lucide-react';
-import { FirebaseInstances } from '../lib/firebaseClient';
-
 
 interface AdminDashboardProps {
     projects: Project[];
     onAddProject: (project: Omit<Project, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
-    onUpdateProject: (project: Pick<Project, 'id' | 'name' | 'image' | 'link'>) => Promise<void>;
+    onUpdateProject: (project: Partial<Project> & { id: string }) => Promise<void>;
     onDeleteProject: (project: Project) => Promise<void>;
     onLogout: () => void;
-    firebase: FirebaseInstances | null;
+    isConnected: boolean;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
@@ -46,10 +43,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
             </aside>
 
             <main className="flex-1 p-8 overflow-y-auto">
-                {!props.firebase && (
+                {!props.isConnected && (
                     <div className="bg-red-900/50 border border-red-700 text-red-200 p-4 rounded-lg mb-8 text-center">
-                        <p className="font-bold text-lg">Firebase Connection Failed</p>
-                        <p className="text-sm">Could not connect to Firebase. Project management is disabled. Please check your configuration and internet connection.</p>
+                        <p className="font-bold text-lg">Database Connection Failed</p>
+                        <p className="text-sm">Could not connect to Supabase. Please check your environment variables.</p>
                     </div>
                 )}
                 <ProjectManager 
@@ -57,7 +54,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                     onAddProject={props.onAddProject}
                     onUpdateProject={props.onUpdateProject}
                     onDeleteProject={props.onDeleteProject}
-                    storage={props.firebase?.storage || null}
                 />
             </main>
         </div>
