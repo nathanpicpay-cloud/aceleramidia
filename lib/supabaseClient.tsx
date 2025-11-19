@@ -38,7 +38,8 @@ const supabaseKey =
   getEnvVar('SUPABASE_ANON_KEY') ||
   getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY');
 
-// Initialize the client only if we have both URL and Key
-export const supabase = (supabaseUrl && supabaseKey) 
-  ? createClient(supabaseUrl, supabaseKey) 
-  : null;
+// Initialize the client. If key is missing, use a placeholder to prevent app crashes.
+// Requests will fail with 401/403 if the key is invalid, but the UI won't be blocked by null checks.
+const validKey = supabaseKey || 'INSERT_SUPABASE_KEY_HERE';
+
+export const supabase = createClient(supabaseUrl, validKey);

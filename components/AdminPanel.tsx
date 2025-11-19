@@ -214,7 +214,6 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
                     </button>
                   )}
                 </div>
-                {error && <p className="text-red-400 text-sm mt-3 bg-red-900/30 p-2 rounded-md">{error}</p>}
                 <p className="text-xs text-zinc-400 mt-3">
                   Todas as alterações são salvas automaticamente.
                 </p>

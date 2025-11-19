@@ -39,11 +39,6 @@ const App: React.FC = () => {
   }, []);
 
   const fetchProjects = useCallback(async () => {
-    if (!supabase) {
-      console.warn("Supabase client not initialized. Check environment variables.");
-      setIsLoading(false);
-      return;
-    }
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -98,9 +93,6 @@ const App: React.FC = () => {
   }
 
   const addProject = async (project: Omit<Project, 'id' | 'created_at' | 'updated_at'>): Promise<void> => {
-     if (!supabase) {
-        throw new Error("Database not connected.");
-      }
     try {
       const { error } = await supabase
         .from('projects')
@@ -117,9 +109,6 @@ const App: React.FC = () => {
   };
 
   const updateProject = async (projectToUpdate: Partial<Project> & { id: string }): Promise<void> => {
-    if (!supabase) {
-        throw new Error("Database not connected.");
-    }
     const { id, ...updateData } = projectToUpdate;
     try {
         const { error } = await supabase
@@ -141,9 +130,6 @@ const App: React.FC = () => {
   };
 
   const deleteProject = async (projectToDelete: Project): Promise<void> => {
-     if (!supabase) {
-        throw new Error("Database not connected.");
-    }
     try {
         const { error } = await supabase
             .from('projects')
@@ -161,10 +147,6 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
-    if (isLoading && !projects.length && !supabase) {
-         // Optional: Render a different loading state if truly stuck
-    }
-
     const cleanRoute = route.toLowerCase();
 
     if (cleanRoute.startsWith('/admin')) {
