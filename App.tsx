@@ -26,7 +26,7 @@ export interface Project {
 }
 
 const SQL_SETUP_CODE = `
--- ⚠️ WARNING: This will reset the projects table to fix schema errors
+-- ⚠️ WARNING: This will reset the projects table to fix schema and RLS errors
 drop table if exists projects;
 
 -- Create the table
@@ -43,7 +43,7 @@ create table projects (
 -- Enable Row Level Security
 alter table projects enable row level security;
 
--- Create permissive policies
+-- Create permissive policies (Fixes RLS Errors)
 create policy "Enable read access for all users" on "public"."projects" as PERMISSIVE for SELECT to public using (true);
 create policy "Enable insert for all users" on "public"."projects" as PERMISSIVE for INSERT to public with check (true);
 create policy "Enable update for all users" on "public"."projects" as PERMISSIVE for UPDATE to public using (true);
@@ -69,8 +69,8 @@ const DatabaseSetupScreen: React.FC<{ onRetry: () => void; onSkip: () => void }>
         <div className="flex items-center gap-4 mb-6 text-red-500">
           <AlertTriangle size={48} />
           <div>
-            <h1 className="text-2xl font-bold text-white">Database Schema Mismatch</h1>
-            <p className="text-zinc-400">Your Supabase database structure is incorrect (likely missing columns or has extra constraints).</p>
+            <h1 className="text-2xl font-bold text-white">Database Permissions Error</h1>
+            <p className="text-zinc-400">Your database exists, but it's blocking write access (RLS Policy).</p>
           </div>
         </div>
 
@@ -80,7 +80,7 @@ const DatabaseSetupScreen: React.FC<{ onRetry: () => void; onSkip: () => void }>
             <ol className="list-decimal list-inside space-y-2 text-zinc-300">
               <li>Go to your <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-[#FF007F] hover:underline">Supabase Dashboard</a>.</li>
               <li>Open the <strong>SQL Editor</strong> from the sidebar.</li>
-              <li>Copy the code below and run it to <strong>RESET</strong> the table correctly.</li>
+              <li>Copy the code below and run it to <strong>RESET</strong> the table and <strong>FIX PERMISSIONS</strong>.</li>
             </ol>
           </div>
 
@@ -215,12 +215,13 @@ const App: React.FC = () => {
       const errorMessage = error?.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
       console.error('Error adding project:', errorMessage);
       
-      // Check for specific constraint violations (like the 'owner' column issue)
+      // Check for RLS policies or schema constraints
       if (errorMessage.includes("violates not-null constraint") || 
           errorMessage.includes("column \"proprietário\"") || 
-          errorMessage.includes("value in column")) {
-         setShowDbSetup(true); // Trigger the setup screen to fix the DB
-         throw new Error("Database schema mismatch. Please follow the instructions on screen.");
+          errorMessage.includes("value in column") ||
+          errorMessage.includes("row-level security policy")) {
+         setShowDbSetup(true); 
+         throw new Error("Database permission error. Please follow the instructions on screen.");
       }
 
       throw new Error(`Failed to add project: ${errorMessage}`);
@@ -244,6 +245,10 @@ const App: React.FC = () => {
     } catch (error: any) {
         const errorMessage = error?.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
         console.error('Error updating project:', errorMessage);
+         if (errorMessage.includes("row-level security policy")) {
+             setShowDbSetup(true);
+             throw new Error("Database permission error. Please follow instructions on screen.");
+         }
         throw new Error(`Failed to update project: ${errorMessage}`);
     }
   };
@@ -261,6 +266,10 @@ const App: React.FC = () => {
     } catch (error: any) {
         const errorMessage = error?.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
         console.error('Error deleting project:', errorMessage);
+         if (errorMessage.includes("row-level security policy")) {
+             setShowDbSetup(true);
+             throw new Error("Database permission error. Please follow instructions on screen.");
+         }
         throw new Error(`Failed to delete project: ${errorMessage}`);
     }
   };
