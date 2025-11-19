@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import type { Project } from '../App';
-import { Paperclip } from 'lucide-react';
+import { Paperclip, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface ProjectManagerProps {
   projects: Project[];
@@ -37,7 +37,7 @@ const ProjectListItem: React.FC<{
       }`}
     >
       <div className="flex items-center space-x-4 overflow-hidden">
-        <img src={project.image} alt={project.name} className="w-16 h-16 object-cover rounded flex-shrink-0" />
+        <img src={project.image} alt={project.name} className="w-16 h-16 object-cover rounded flex-shrink-0 bg-zinc-900" />
         <div className="overflow-hidden">
           <p className="font-semibold truncate">{project.name}</p>
           <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-xs text-zinc-400 hover:text-blue-400 break-all truncate block">
@@ -64,12 +64,15 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
   const [isSaving, setIsSaving] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const resetForm = () => {
     setEditingProject(null);
     setFormData({ name: '', link: '', image: '', attachment: '' });
     setPreviewUrl('');
     setError(null);
+    // Don't clear success message immediately so user can see it
+    setTimeout(() => setSuccessMessage(null), 3000);
   };
 
   useEffect(() => {
@@ -82,8 +85,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
       });
       setPreviewUrl(editingProject.image);
       setError(null);
-    } else {
-      resetForm();
+      setSuccessMessage(null);
     }
   }, [editingProject]);
   
@@ -95,9 +97,24 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
     }
   };
 
+  // Automatically convert Imgur gallery links to direct image links on blur
+  const handleImageBlur = () => {
+    let url = formData.image.trim();
+    // Regex to detect imgur.com/ID without i.imgur.com and without file extension
+    const imgurRegex = /^https?:\/\/(?:www\.)?imgur\.com\/([a-zA-Z0-9]+)$/;
+    const match = url.match(imgurRegex);
+
+    if (match && match[1]) {
+        const newUrl = `https://i.imgur.com/${match[1]}.png`;
+        setFormData(prev => ({ ...prev, image: newUrl }));
+        setPreviewUrl(newUrl);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessMessage(null);
 
     if (!formData.name || !formData.link) {
       setError("Nome do Projeto e Link URL são obrigatórios.");
@@ -120,11 +137,18 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
         
         if (editingProject) {
             await onUpdateProject({ ...projectData, id: editingProject.id });
+            setSuccessMessage("Projeto atualizado com sucesso!");
         } else {
             await onAddProject(projectData as Omit<Project, 'id' | 'created_at' | 'updated_at'>);
+            setSuccessMessage("Projeto adicionado com sucesso!");
+            // Clear form data only on successful add (not edit, though logic handles resetForm)
+            setFormData({ name: '', link: '', image: '', attachment: '' });
+            setPreviewUrl('');
         }
-
-        resetForm();
+        setEditingProject(null);
+        
+        // We manually reset form data above if add, but resetForm does cleanup
+        setTimeout(() => setSuccessMessage(null), 3000);
 
     } catch (err: any) {
         console.error("Failed to save project:", err);
@@ -136,12 +160,16 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
 
   const handleEdit = (project: Project) => {
     setEditingProject(project);
+    setSuccessMessage(null);
+    setError(null);
     document.getElementById('project-form')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const handleDelete = async (project: Project) => {
     try {
         await onDeleteProject(project);
+        setSuccessMessage("Projeto excluído com sucesso!");
+        setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: any) {
         console.error("Delete operation failed in ProjectManager:", err);
         setError(`Falha ao excluir: ${err.message}`);
@@ -156,6 +184,21 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
     <div className="w-full max-w-4xl mx-auto text-white">
         <div id="project-form" className="bg-zinc-800/50 border border-zinc-700 p-6 rounded-lg mb-8">
             <h3 className="font-bold mb-4 text-xl">{editingProject ? 'Editar Projeto' : 'Adicionar Novo Projeto'}</h3>
+            
+            {error && (
+                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded flex items-center gap-2 text-red-400 text-sm">
+                    <AlertCircle size={16} />
+                    <span>{error}</span>
+                </div>
+            )}
+
+            {successMessage && (
+                <div className="mb-4 p-3 bg-green-500/10 border border-green-500/50 rounded flex items-center gap-2 text-green-400 text-sm">
+                    <CheckCircle size={16} />
+                    <span>{successMessage}</span>
+                </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <input type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="Nome do Projeto" required className="w-full bg-zinc-700 p-2 rounded text-white placeholder-zinc-400"/>
               
@@ -169,7 +212,8 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
                           type="text" 
                           name="image" 
                           value={formData.image}
-                          onChange={handleInputChange} 
+                          onChange={handleInputChange}
+                          onBlur={handleImageBlur} 
                           placeholder="https://i.imgur.com/..."
                           required
                           className="w-full bg-zinc-700 p-2 rounded text-white placeholder-zinc-400"
@@ -180,7 +224,7 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
                   </div>
                   {previewUrl && (
                       <div className="flex justify-start">
-                          <img src={previewUrl} alt="Preview" className="w-24 h-24 object-cover rounded-lg border-2 border-zinc-700" />
+                          <img src={previewUrl} alt="Preview" className="w-24 h-24 object-cover rounded-lg border-2 border-zinc-700 bg-zinc-900" />
                       </div>
                   )}
               </div>
@@ -223,6 +267,9 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
 
           <div>
             <h3 className="font-bold mb-4 text-xl">Projetos Existentes</h3>
+            {projects.length === 0 && (
+                <p className="text-zinc-500 italic">Nenhum projeto encontrado.</p>
+            )}
             <div className="space-y-3">
               {projects.map((project) => (
                 <ProjectListItem
