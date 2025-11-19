@@ -8,7 +8,7 @@ const supabaseUrl = 'https://kjbjdouebkytjgnbibkk.supabase.co';
 // 👇 COLOQUE SUA CHAVE (ANON KEY) AQUI DENTRO DAS ASPAS ABAIXO 👇
 // Ela começa com "eyJ..." e pode ser encontrada em Project Settings > API no painel do Supabase
 // ------------------------------------------------------------------
-const SUPABASE_ANON_KEY = ""; 
+const SUPABASE_ANON_KEY = "sb_publishable_fCv1SaQ3Xov1E4KHDg2FWw_sTitXCYv"; 
 // ------------------------------------------------------------------
 
 // Helper para acessar variáveis de ambiente com segurança
