@@ -46,21 +46,28 @@ const App: React.FC = () => {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
       const projectList = (data || []).map((item: any) => ({
-          id: item.id.toString(), // Ensure ID is string
-          name: item.name,
-          image: item.image,
-          link: item.link,
+          id: item.id ? item.id.toString() : Math.random().toString(36).substr(2, 9), // Ensure ID exists
+          name: item.name || 'Sem título',
+          image: item.image || '',
+          link: item.link || '#',
           attachment: item.attachment || null,
-          created_at: item.created_at,
-          updated_at: item.updated_at,
+          created_at: item.created_at || new Date().toISOString(),
+          updated_at: item.updated_at || new Date().toISOString(),
       }));
       setProjects(projectList);
-    } catch (error) {
-      console.error("Error fetching projects:", error);
-      // alert("Could not load projects.");
+    } catch (error: any) {
+      const errorMessage = error?.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
+      
+      if (errorMessage.includes("Invalid API key")) {
+          console.warn("Supabase API Key is invalid or missing. Check environment variables.");
+      } else {
+          console.error("Error fetching projects:", errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -101,10 +108,10 @@ const App: React.FC = () => {
       if (error) throw error;
       
       await fetchProjects();
-    } catch (error) {
-      console.error('Error adding project:', error);
-      const message = `Failed to add project. Reason: ${error instanceof Error ? error.message : 'Unknown error'}`;
-      throw new Error(message);
+    } catch (error: any) {
+      const errorMessage = error?.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
+      console.error('Error adding project:', errorMessage);
+      throw new Error(`Failed to add project: ${errorMessage}`);
     }
   };
 
@@ -122,10 +129,10 @@ const App: React.FC = () => {
         if (error) throw error;
         
         await fetchProjects();
-    } catch (error) {
-        console.error('Error updating project:', error);
-        const message = `Failed to update project. Reason: ${error instanceof Error ? error.message : 'Unknown error'}`;
-        throw new Error(message);
+    } catch (error: any) {
+        const errorMessage = error?.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
+        console.error('Error updating project:', errorMessage);
+        throw new Error(`Failed to update project: ${errorMessage}`);
     }
   };
 
@@ -139,10 +146,10 @@ const App: React.FC = () => {
         if (error) throw error;
         
         await fetchProjects();
-    } catch (error) {
-        console.error('Error deleting project:', error);
-        const message = `Failed to delete project. Reason: ${error instanceof Error ? error.message : 'Unknown error'}`;
-        throw new Error(message);
+    } catch (error: any) {
+        const errorMessage = error?.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
+        console.error('Error deleting project:', errorMessage);
+        throw new Error(`Failed to delete project: ${errorMessage}`);
     }
   };
 
