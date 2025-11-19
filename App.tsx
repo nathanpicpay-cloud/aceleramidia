@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
@@ -175,7 +176,6 @@ const App: React.FC = () => {
             onUpdateProject={updateProject}
             onDeleteProject={deleteProject}
             onLogout={handleLogout}
-            isConnected={!!supabase}
           />
         );
       } else {

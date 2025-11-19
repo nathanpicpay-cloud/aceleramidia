@@ -1,3 +1,4 @@
+
 import React from 'react';
 import type { Project } from '../App';
 import ProjectManager from '../components/AdminPanel';
@@ -9,10 +10,15 @@ interface AdminDashboardProps {
     onUpdateProject: (project: Partial<Project> & { id: string }) => Promise<void>;
     onDeleteProject: (project: Project) => Promise<void>;
     onLogout: () => void;
-    isConnected: boolean;
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
+    projects, 
+    onAddProject, 
+    onUpdateProject, 
+    onDeleteProject, 
+    onLogout 
+}) => {
 
     return (
         <div className="bg-zinc-900 text-white min-h-screen flex font-sans">
@@ -35,7 +41,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                         <Home size={20} />
                         <span>Back to Site</span>
                     </a>
-                    <button onClick={props.onLogout} className="flex items-center space-x-3 p-3 w-full text-left rounded-lg hover:bg-zinc-800 transition-colors duration-200">
+                    <button onClick={onLogout} className="flex items-center space-x-3 p-3 w-full text-left rounded-lg hover:bg-zinc-800 transition-colors duration-200">
                         <LogOut size={20} />
                         <span>Logout</span>
                     </button>
@@ -43,17 +49,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
             </aside>
 
             <main className="flex-1 p-8 overflow-y-auto">
-                {!props.isConnected && (
-                    <div className="bg-red-900/50 border border-red-700 text-red-200 p-4 rounded-lg mb-8 text-center">
-                        <p className="font-bold text-lg">Database Connection Failed</p>
-                        <p className="text-sm">Could not connect to Supabase. Please check your environment variables.</p>
-                    </div>
-                )}
                 <ProjectManager 
-                    projects={props.projects}
-                    onAddProject={props.onAddProject}
-                    onUpdateProject={props.onUpdateProject}
-                    onDeleteProject={props.onDeleteProject}
+                    projects={projects}
+                    onAddProject={onAddProject}
+                    onUpdateProject={onUpdateProject}
+                    onDeleteProject={onDeleteProject}
                 />
             </main>
         </div>

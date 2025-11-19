@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import type { Project } from '../App';
 import { Paperclip } from 'lucide-react';
@@ -173,7 +174,9 @@ const ProjectManager: React.FC<ProjectManagerProps> = ({ projects, onAddProject,
                           required
                           className="w-full bg-zinc-700 p-2 rounded text-white placeholder-zinc-400"
                       />
-                      <p className="text-xs text-zinc-500 mt-1">Cole o link direto da imagem (ex: Imgur).</p>
+                      <p className="text-xs text-zinc-500 mt-1">
+                        Cole o link direto da imagem. Recomendado: <a href="https://imgur.com/upload" target="_blank" rel="noopener noreferrer" className="text-[#FF007F] hover:underline">Upload no Imgur</a>
+                      </p>
                   </div>
                   {previewUrl && (
                       <div className="flex justify-start">
