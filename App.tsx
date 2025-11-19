@@ -26,8 +26,11 @@ export interface Project {
 }
 
 const SQL_SETUP_CODE = `
--- Create the table if it doesn't exist
-create table if not exists projects (
+-- ⚠️ WARNING: This will reset the projects table to fix schema errors
+drop table if exists projects;
+
+-- Create the table
+create table projects (
   id uuid default gen_random_uuid() primary key,
   name text not null,
   image text not null,
@@ -39,12 +42,6 @@ create table if not exists projects (
 
 -- Enable Row Level Security
 alter table projects enable row level security;
-
--- Drop existing policies to avoid conflicts if re-running
-drop policy if exists "Enable read access for all users" on "public"."projects";
-drop policy if exists "Enable insert for all users" on "public"."projects";
-drop policy if exists "Enable update for all users" on "public"."projects";
-drop policy if exists "Enable delete for all users" on "public"."projects";
 
 -- Create permissive policies
 create policy "Enable read access for all users" on "public"."projects" as PERMISSIVE for SELECT to public using (true);
@@ -72,8 +69,8 @@ const DatabaseSetupScreen: React.FC<{ onRetry: () => void; onSkip: () => void }>
         <div className="flex items-center gap-4 mb-6 text-red-500">
           <AlertTriangle size={48} />
           <div>
-            <h1 className="text-2xl font-bold text-white">Database Not Configured</h1>
-            <p className="text-zinc-400">The 'projects' table is missing in your Supabase database.</p>
+            <h1 className="text-2xl font-bold text-white">Database Schema Mismatch</h1>
+            <p className="text-zinc-400">Your Supabase database structure is incorrect (likely missing columns or has extra constraints).</p>
           </div>
         </div>
 
@@ -83,7 +80,7 @@ const DatabaseSetupScreen: React.FC<{ onRetry: () => void; onSkip: () => void }>
             <ol className="list-decimal list-inside space-y-2 text-zinc-300">
               <li>Go to your <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-[#FF007F] hover:underline">Supabase Dashboard</a>.</li>
               <li>Open the <strong>SQL Editor</strong> from the sidebar.</li>
-              <li>Copy the code below and run it to create the required table.</li>
+              <li>Copy the code below and run it to <strong>RESET</strong> the table correctly.</li>
             </ol>
           </div>
 
@@ -217,6 +214,15 @@ const App: React.FC = () => {
     } catch (error: any) {
       const errorMessage = error?.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
       console.error('Error adding project:', errorMessage);
+      
+      // Check for specific constraint violations (like the 'owner' column issue)
+      if (errorMessage.includes("violates not-null constraint") || 
+          errorMessage.includes("column \"proprietário\"") || 
+          errorMessage.includes("value in column")) {
+         setShowDbSetup(true); // Trigger the setup screen to fix the DB
+         throw new Error("Database schema mismatch. Please follow the instructions on screen.");
+      }
+
       throw new Error(`Failed to add project: ${errorMessage}`);
     }
   };
