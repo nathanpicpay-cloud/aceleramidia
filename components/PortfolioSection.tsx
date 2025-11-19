@@ -6,14 +6,7 @@ interface PortfolioSectionProps {
   projects: Project[];
 }
 
-const PortfolioItemCard: React.FC<Project> = ({ name, image, link, updated_at }) => {
-  // Firebase Storage URLs from getDownloadURL include a token. Appending another parameter requires an '&'.
-  // This logic correctly appends a cache-busting parameter without breaking the download token.
-  const isFirebaseImage = image && image.includes('firebasestorage.googleapis.com');
-  const imageUrl = isFirebaseImage && updated_at 
-    ? `${image}&v=${new Date(updated_at).getTime()}` 
-    : image;
-
+const PortfolioItemCard: React.FC<Project> = ({ name, image, link }) => {
   return (
     <a 
       href={link} 
@@ -23,7 +16,7 @@ const PortfolioItemCard: React.FC<Project> = ({ name, image, link, updated_at })
                  shadow-[0_0_15px_rgba(255,0,127,0.4)] hover:shadow-[0_0_25px_rgba(255,0,127,0.7)] 
                  transition-all duration-300 transform hover:scale-105"
     >
-      <img src={imageUrl} alt={name} className="w-full h-full object-cover object-top" />
+      <img src={image} alt={name} className="w-full h-full object-cover object-top" />
       <div className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
         <h3 className="text-white text-lg font-bold text-center px-2">{name}</h3>
       </div>
