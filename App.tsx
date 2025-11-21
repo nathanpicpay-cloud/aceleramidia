@@ -218,11 +218,13 @@ const App: React.FC = () => {
       const errorMessage = error?.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
       console.error('Error adding project:', errorMessage);
       
-      // Check for RLS policies or schema constraints
+      // Check for RLS policies or schema constraints (Includes Portuguese translations)
       if (errorMessage.includes("violates not-null constraint") || 
           errorMessage.includes("column \"proprietário\"") || 
           errorMessage.includes("column 'owner'") ||
           errorMessage.includes("Could not find the column") ||
+          errorMessage.includes("Não foi possível encontrar a coluna") || // Portuguese check
+          errorMessage.includes("cache do esquema") || // Portuguese check
           errorMessage.includes("value in column") ||
           errorMessage.includes("row-level security policy")) {
          setShowDbSetup(true); 
@@ -250,7 +252,10 @@ const App: React.FC = () => {
     } catch (error: any) {
         const errorMessage = error?.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
         console.error('Error updating project:', errorMessage);
-         if (errorMessage.includes("row-level security policy") || errorMessage.includes("column 'owner'") || errorMessage.includes("Could not find the column")) {
+         if (errorMessage.includes("row-level security policy") || 
+             errorMessage.includes("column 'owner'") || 
+             errorMessage.includes("Não foi possível encontrar a coluna") ||
+             errorMessage.includes("Could not find the column")) {
              setShowDbSetup(true);
              throw new Error("Database schema mismatch. Please follow instructions on screen.");
          }
