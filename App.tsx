@@ -71,18 +71,18 @@ const DatabaseSetupScreen: React.FC<{ onRetry: () => void; onSkip: () => void }>
         <div className="flex items-center gap-4 mb-6 text-red-500">
           <AlertTriangle size={48} />
           <div>
-            <h1 className="text-2xl font-bold text-white">Database Schema Mismatch</h1>
-            <p className="text-zinc-400">Your database table structure is outdated (missing columns) or requires a permission fix.</p>
+            <h1 className="text-2xl font-bold text-white">Inconsistência no Banco de Dados</h1>
+            <p className="text-zinc-400">A estrutura do seu banco de dados está desatualizada (colunas ausentes) ou requer correção de permissões.</p>
           </div>
         </div>
 
         <div className="space-y-6">
           <div className="bg-zinc-950 rounded-lg border border-zinc-800 p-4">
-            <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-wider mb-3">Required Action</h3>
+            <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-wider mb-3">Ação Necessária</h3>
             <ol className="list-decimal list-inside space-y-2 text-zinc-300">
-              <li>Go to your <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-[#FF007F] hover:underline">Supabase Dashboard</a>.</li>
-              <li>Open the <strong>SQL Editor</strong> from the sidebar.</li>
-              <li>Copy the code below and run it to <strong>RESET</strong> the table and <strong>FIX COLUMNS</strong>.</li>
+              <li>Acesse seu <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-[#FF007F] hover:underline">Painel Supabase</a>.</li>
+              <li>Abra o <strong>Editor SQL</strong> na barra lateral.</li>
+              <li>Copie o código abaixo e execute-o para <strong>REDEFINIR</strong> a tabela e <strong>CORRIGIR COLUNAS</strong>.</li>
             </ol>
           </div>
 
@@ -93,7 +93,7 @@ const DatabaseSetupScreen: React.FC<{ onRetry: () => void; onSkip: () => void }>
                 className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold py-2 px-3 rounded transition-colors"
               >
                 {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
-                {copied ? "Copied!" : "Copy SQL"}
+                {copied ? "Copiado!" : "Copiar SQL"}
               </button>
             </div>
             <pre className="bg-black/50 p-4 rounded-lg text-sm text-zinc-300 font-mono overflow-x-auto border border-zinc-800 custom-scrollbar h-48">
@@ -107,14 +107,14 @@ const DatabaseSetupScreen: React.FC<{ onRetry: () => void; onSkip: () => void }>
               className="flex-1 bg-[#FF007F] hover:bg-[#d9006c] text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,0,127,0.4)]"
             >
               <RefreshCw size={20} />
-              Retry Connection
+              Tentar Novamente
             </button>
             
             <button 
               onClick={onSkip}
               className="sm:w-auto bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold py-4 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2"
             >
-              Continue Offline
+              Continuar Offline
               <ArrowRight size={20} />
             </button>
           </div>
@@ -167,12 +167,12 @@ const App: React.FC = () => {
       const errorMessage = error?.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
       
       if (errorMessage.includes("Invalid API key")) {
-          console.warn("Supabase API Key is invalid or missing. Check environment variables.");
+          console.warn("A chave da API Supabase é inválida ou está ausente.");
       } else if (errorMessage.includes("Could not find the table") || errorMessage.includes("relation \"public.projects\" does not exist")) {
-          console.error("⚠️ TABLE MISSING IN SUPABASE ⚠️");
+          console.error("⚠️ TABELA AUSENTE NO SUPABASE ⚠️");
           setShowDbSetup(true);
       } else {
-          console.error("Error fetching projects:", errorMessage);
+          console.error("Erro ao buscar projetos:", errorMessage);
       }
     } finally {
       setIsLoading(false);
@@ -195,7 +195,7 @@ const App: React.FC = () => {
       sessionStorage.setItem('isAdmin', 'true');
       window.location.hash = '/admin';
     } else {
-      alert('Incorrect password.');
+      alert('Senha incorreta.');
     }
   };
 
@@ -216,7 +216,7 @@ const App: React.FC = () => {
       await fetchProjects();
     } catch (error: any) {
       const errorMessage = error?.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
-      console.error('Error adding project:', errorMessage);
+      console.error('Erro ao adicionar projeto:', errorMessage);
       
       // Check for RLS policies or schema constraints (Includes Portuguese translations)
       if (errorMessage.includes("violates not-null constraint") || 
@@ -228,10 +228,10 @@ const App: React.FC = () => {
           errorMessage.includes("value in column") ||
           errorMessage.includes("row-level security policy")) {
          setShowDbSetup(true); 
-         throw new Error("Database schema mismatch. Please follow the instructions on screen.");
+         throw new Error("Incompatibilidade de esquema do banco de dados. Siga as instruções na tela.");
       }
 
-      throw new Error(`Failed to add project: ${errorMessage}`);
+      throw new Error(`Falha ao adicionar projeto: ${errorMessage}`);
     }
   };
 
@@ -251,15 +251,15 @@ const App: React.FC = () => {
         await fetchProjects();
     } catch (error: any) {
         const errorMessage = error?.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
-        console.error('Error updating project:', errorMessage);
+        console.error('Erro ao atualizar projeto:', errorMessage);
          if (errorMessage.includes("row-level security policy") || 
              errorMessage.includes("column 'owner'") || 
              errorMessage.includes("Não foi possível encontrar a coluna") ||
              errorMessage.includes("Could not find the column")) {
              setShowDbSetup(true);
-             throw new Error("Database schema mismatch. Please follow instructions on screen.");
+             throw new Error("Incompatibilidade de esquema do banco de dados. Siga as instruções na tela.");
          }
-        throw new Error(`Failed to update project: ${errorMessage}`);
+        throw new Error(`Falha ao atualizar projeto: ${errorMessage}`);
     }
   };
 
@@ -275,12 +275,12 @@ const App: React.FC = () => {
         await fetchProjects();
     } catch (error: any) {
         const errorMessage = error?.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
-        console.error('Error deleting project:', errorMessage);
+        console.error('Erro ao excluir projeto:', errorMessage);
          if (errorMessage.includes("row-level security policy")) {
              setShowDbSetup(true);
-             throw new Error("Database permission error. Please follow instructions on screen.");
+             throw new Error("Erro de permissão do banco de dados. Siga as instruções na tela.");
          }
-        throw new Error(`Failed to delete project: ${errorMessage}`);
+        throw new Error(`Falha ao excluir projeto: ${errorMessage}`);
     }
   };
 

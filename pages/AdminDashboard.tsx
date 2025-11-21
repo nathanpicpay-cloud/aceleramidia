@@ -32,18 +32,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <a href="#/admin" 
                            className='flex items-center space-x-3 p-3 rounded-lg transition-colors duration-200 bg-[#FF007F] text-white'>
                            <Briefcase size={20} />
-                           <span>Projects</span>
+                           <span>Projetos</span>
                         </a>
                     </nav>
                 </div>
                 <div className="flex flex-col space-y-2">
                     <a href="/#" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-zinc-800 transition-colors duration-200">
                         <Home size={20} />
-                        <span>Back to Site</span>
+                        <span>Voltar ao Site</span>
                     </a>
                     <button onClick={onLogout} className="flex items-center space-x-3 p-3 w-full text-left rounded-lg hover:bg-zinc-800 transition-colors duration-200">
                         <LogOut size={20} />
-                        <span>Logout</span>
+                        <span>Sair</span>
                     </button>
                 </div>
             </aside>
