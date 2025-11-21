@@ -105,11 +105,11 @@ const ContactSection: React.FC = () => {
         <div className="text-center mt-16">
             <p className="text-zinc-400 mb-6">Ou nos encontre aqui:</p>
             <div className="flex flex-col sm:flex-row justify-center items-center gap-6">
-                <a href="#" className="inline-flex items-center justify-center gap-3 bg-zinc-800/50 border border-zinc-700 text-white font-bold py-3 px-8 rounded-full text-lg hover:bg-zinc-800 hover:border-[#FF007F] transition-all duration-300 w-full sm:w-auto">
+                <a href="https://wa.me/5577988400518" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-3 bg-zinc-800/50 border border-zinc-700 text-white font-bold py-3 px-8 rounded-full text-lg hover:bg-zinc-800 hover:border-[#FF007F] transition-all duration-300 w-full sm:w-auto">
                     <WhatsApp />
                     <span>WhatsApp</span>
                 </a>
-                <a href="#" className="inline-flex items-center justify-center gap-3 bg-zinc-800/50 border border-zinc-700 text-white font-bold py-3 px-8 rounded-full text-lg hover:bg-zinc-800 hover:border-[#FF007F] transition-all duration-300 w-full sm:w-auto">
+                <a href="https://www.instagram.com/aceleramidiasystems/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-3 bg-zinc-800/50 border border-zinc-700 text-white font-bold py-3 px-8 rounded-full text-lg hover:bg-zinc-800 hover:border-[#FF007F] transition-all duration-300 w-full sm:w-auto">
                     <Instagram />
                     <span>Instagram</span>
                 </a>
