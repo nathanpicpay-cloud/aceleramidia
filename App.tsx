@@ -71,8 +71,8 @@ const DatabaseSetupScreen: React.FC<{ onRetry: () => void; onSkip: () => void }>
         <div className="flex items-center gap-4 mb-6 text-red-500">
           <AlertTriangle size={48} />
           <div>
-            <h1 className="text-2xl font-bold text-white">Database Permissions Error</h1>
-            <p className="text-zinc-400">Your database exists, but it's blocking write access (RLS Policy) or requires a schema update.</p>
+            <h1 className="text-2xl font-bold text-white">Database Schema Mismatch</h1>
+            <p className="text-zinc-400">Your database table structure is outdated (missing columns) or requires a permission fix.</p>
           </div>
         </div>
 
@@ -82,7 +82,7 @@ const DatabaseSetupScreen: React.FC<{ onRetry: () => void; onSkip: () => void }>
             <ol className="list-decimal list-inside space-y-2 text-zinc-300">
               <li>Go to your <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-[#FF007F] hover:underline">Supabase Dashboard</a>.</li>
               <li>Open the <strong>SQL Editor</strong> from the sidebar.</li>
-              <li>Copy the code below and run it to <strong>RESET</strong> the table and <strong>FIX PERMISSIONS</strong>.</li>
+              <li>Copy the code below and run it to <strong>RESET</strong> the table and <strong>FIX COLUMNS</strong>.</li>
             </ol>
           </div>
 
@@ -221,10 +221,12 @@ const App: React.FC = () => {
       // Check for RLS policies or schema constraints
       if (errorMessage.includes("violates not-null constraint") || 
           errorMessage.includes("column \"proprietário\"") || 
+          errorMessage.includes("column 'owner'") ||
+          errorMessage.includes("Could not find the column") ||
           errorMessage.includes("value in column") ||
           errorMessage.includes("row-level security policy")) {
          setShowDbSetup(true); 
-         throw new Error("Database permission error. Please follow the instructions on screen.");
+         throw new Error("Database schema mismatch. Please follow the instructions on screen.");
       }
 
       throw new Error(`Failed to add project: ${errorMessage}`);
@@ -248,9 +250,9 @@ const App: React.FC = () => {
     } catch (error: any) {
         const errorMessage = error?.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
         console.error('Error updating project:', errorMessage);
-         if (errorMessage.includes("row-level security policy")) {
+         if (errorMessage.includes("row-level security policy") || errorMessage.includes("column 'owner'") || errorMessage.includes("Could not find the column")) {
              setShowDbSetup(true);
-             throw new Error("Database permission error. Please follow instructions on screen.");
+             throw new Error("Database schema mismatch. Please follow instructions on screen.");
          }
         throw new Error(`Failed to update project: ${errorMessage}`);
     }
